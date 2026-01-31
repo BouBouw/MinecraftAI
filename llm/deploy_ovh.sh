@@ -133,6 +133,9 @@ step3_setup_python() {
 
     cd "$PROJECT_DIR"
 
+    # Create logs directory first (needed for install.log)
+    mkdir -p llm/data/logs
+
     # Create virtual environment
     if [ ! -d "venv" ]; then
         log "  Creating Python virtual environment..."
@@ -162,6 +165,7 @@ step3_setup_python() {
             tensorboard \
             sentence-transformers \
             > /dev/null 2>&1
+        log "  ✅ Python packages installed"
     fi
 
     log "✅ Python environment ready"
@@ -213,7 +217,6 @@ step5_create_directories() {
     mkdir -p llm/data/memories
     mkdir -p llm/data/experiences
     mkdir -p llm/data/models
-    mkdir -p llm/data/logs
     mkdir -p llm/data/logs/tensorboard
 
     log "✅ Directories created"

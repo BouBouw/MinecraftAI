@@ -1,0 +1,814 @@
+import fs from 'fs';
+import nbt from 'prismarine-nbt';
+import Vec3 from 'vec3';
+import pkg from 'mineflayer-pathfinder';
+
+// Get pathfinder components (same as server.js)
+const { pathfinder, Movements, goals } = pkg;
+
+/**
+ * Schematic Builder - Constructs structures block by block
+ * Uses right-click simulation like a real player
+ */
+export class SchematicBuilder {
+    constructor(bot, schematicPath, origin) {
+        this.bot = bot;
+        this.schematicPath = schematicPath;
+        this.origin = origin; // {x, y, z} - where to place the schematic
+
+        console.log('=== SCHEMATIC BUILDER CONSTRUCTOR DEBUG ===');
+        console.log('schematicPath:', schematicPath);
+        console.log('origin received:', origin);
+        console.log('origin type:', typeof origin);
+        console.log('origin.x:', origin.x, 'type:', typeof origin.x);
+        console.log('origin.y:', origin.y, 'type:', typeof origin.y);
+        console.log('origin.z:', origin.z, 'type:', typeof origin.z);
+        console.log('==========================================');
+
+        this.blocks = [];
+        this.currentIndex = 0;
+        this.isBuilding = false;
+        this.skippedBlocks = []; // Track blocks that couldn't be placed on first pass
+
+        // Stats
+        this.totalBlocks = 0;
+        this.placedBlocks = 0;
+    }
+
+    /**
+     * Load schematic and prepare for building
+     */
+    async loadSchematic() {
+        try {
+            console.log(`📂 Loading schematic: ${this.schematicPath}`);
+
+            // Check if file exists
+            if (!fs.existsSync(this.schematicPath)) {
+                throw new Error(`Schematic file not found: ${this.schematicPath}`);
+            }
+
+            // Read the schematic file
+            const data = fs.readFileSync(this.schematicPath);
+            const fileContent = data.toString('utf8');
+
+            // Check if file is JSON format (Sponge schematic)
+            if (fileContent.trim().startsWith('{')) {
+                console.log('📋 Detected Sponge JSON schematic format');
+                return this.loadSpongeSchematic(JSON.parse(fileContent));
+            }
+
+            // Otherwise, try NBT format
+            console.log('📦 Detected NBT schematic format');
+            const parsed = await nbt.parse(data);
+
+            const schematic = parsed.value.value.value;
+            const width = schematic.Width.value;
+            const height = schematic.Height.value;
+            const length = schematic.Length.value;
+
+            // Get block data
+            const blockData = schematic.BlockData?.value || schematic.Blocks.value;
+            const palette = schematic.Palette?.value || {};
+
+            console.log(`   Dimensions: ${width}x${height}x${length}`);
+            console.log(`   Palette size: ${Object.keys(palette).length} blocks`);
+
+            // Parse blocks
+            this.blocks = [];
+
+            // Sponge schematic format
+            if (schematic.BlockData !== undefined) {
+                // Decode BlockData if it's a Buffer
+                let decodedData;
+                if (schematic.BlockData.Data) {
+                    // Base64 encoded data - parse as varints
+                    decodedData = Buffer.from(schematic.BlockData.Data, 'base64');
+
+                    // Parse varint array
+                    const blockIds = [];
+                    let i = 0;
+                    while (i < decodedData.length) {
+                        let value = 0;
+                        let shift = 0;
+                        let b;
+                        do {
+                            b = decodedData[i++];
+                            value |= (b & 0x7F) << shift;
+                            shift += 7;
+                        } while (b & 0x80);
+                        blockIds.push(value);
+                    }
+
+                    console.log(`   Parsed ${blockIds.length} block IDs from varint format (NBT)`);
+
+                    let index = 0;
+                    for (let y = 0; y < height; y++) {
+                        for (let z = 0; z < length; z++) {
+                            for (let x = 0; x < width; x++) {
+                                const blockId = blockIds[index];
+
+                                // Skip air blocks
+                                if (blockId !== 0) {
+                                    const blockName = this.getBlockNameById(blockId, palette);
+
+                                    // Calculate world position
+                                    const worldPos = {
+                                        x: this.origin.x + x,
+                                        y: this.origin.y + y,
+                                        z: this.origin.z + z
+                                    };
+
+                                    this.blocks.push({
+                                        position: worldPos,
+                                        name: blockName,
+                                        local: { x, y, z }
+                                    });
+                                }
+
+                                index++;
+                            }
+                        }
+                    }
+                } else {
+                    decodedData = blockData;
+                    // Legacy format without varints
+                    let index = 0;
+                    for (let y = 0; y < height; y++) {
+                        for (let z = 0; z < length; z++) {
+                            for (let x = 0; x < width; x++) {
+                                const blockId = decodedData[index];
+
+                                if (blockId !== 0) {
+                                    const blockName = this.getBlockNameById(blockId, palette);
+
+                                    const worldPos = {
+                                        x: this.origin.x + x,
+                                        y: this.origin.y + y,
+                                        z: this.origin.z + z
+                                    };
+
+                                    this.blocks.push({
+                                        position: worldPos,
+                                        name: blockName,
+                                        local: { x, y, z }
+                                    });
+                                }
+
+                                index++;
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Sort blocks by Y (build from bottom to top) for stability
+            this.blocks.sort((a, b) => a.position.y - b.position.y);
+
+            this.totalBlocks = this.blocks.length;
+            this.currentIndex = 0;
+
+            console.log(`✅ Schematic loaded: ${this.totalBlocks} blocks to place`);
+
+            return {
+                width,
+                height,
+                length,
+                totalBlocks: this.totalBlocks,
+                palette: Object.keys(palette)
+            };
+
+        } catch (error) {
+            console.error('❌ Failed to load schematic:', error.message);
+            throw error;
+        }
+    }
+
+    /**
+     * Load Sponge JSON schematic format
+     */
+    loadSpongeSchematic(json) {
+        const width = json.Width;
+        const height = json.Height;
+        const length = json.Length;
+        const palette = json.Palette;
+
+        console.log(`   Dimensions: ${width}x${height}x${length}`);
+        console.log(`   Palette size: ${Object.keys(palette).length} blocks`);
+
+        // Debug: Show palette contents
+        console.log(`   Palette contents:`);
+        for (const [name, id] of Object.entries(palette)) {
+            console.log(`     [${id}] = ${name}`);
+        }
+
+        console.log(`   DEBUG origin: (${this.origin.x}, ${this.origin.y}, ${this.origin.z})`);
+
+        // Decode BlockData from base64
+        const blockDataBuffer = Buffer.from(json.BlockData.Data, 'base64');
+
+        // Parse varint array from BlockData
+        const blockIds = [];
+        let i = 0;
+        while (i < blockDataBuffer.length) {
+            let value = 0;
+            let shift = 0;
+            let b;
+            do {
+                b = blockDataBuffer[i++];
+                value |= (b & 0x7F) << shift;
+                shift += 7;
+            } while (b & 0x80);
+            blockIds.push(value);
+        }
+
+        console.log(`   Parsed ${blockIds.length} block IDs from varint format`);
+        console.log(`   First 20 block IDs: ${blockIds.slice(0, 20).join(', ')}`);
+
+        this.blocks = [];
+        let index = 0;
+
+        for (let y = 0; y < height; y++) {
+            for (let z = 0; z < length; z++) {
+                for (let x = 0; x < width; x++) {
+                    const blockId = blockIds[index];
+
+                    // Skip air blocks
+                    if (blockId !== 0) {
+                        // Find block name in palette
+                        const blockName = this.getBlockNameById(blockId, palette);
+
+                        const worldPos = {
+                            x: this.origin.x + x,
+                            y: this.origin.y + y,
+                            z: this.origin.z + z
+                        };
+
+                        // Debug first block
+                        if (this.blocks.length === 0) {
+                            console.log(`   DEBUG first block calculation:`);
+                            console.log(`     local=(${x},${y},${z})`);
+                            console.log(`     origin=(${this.origin.x},${this.origin.y},${this.origin.z})`);
+                            console.log(`     blockId from palette: ${blockId}`);
+                            console.log(`     blockName: ${blockName}`);
+                            console.log(`     worldPos calculation:`);
+                            console.log(`       x: ${this.origin.x} + ${x} = ${worldPos.x}`);
+                            console.log(`       y: ${this.origin.y} + ${y} = ${worldPos.y}`);
+                            console.log(`       z: ${this.origin.z} + ${z} = ${worldPos.z}`);
+                            console.log(`     result=(${worldPos.x}, ${worldPos.y}, ${worldPos.z})`);
+                        }
+
+                        this.blocks.push({
+                            position: worldPos,
+                            name: blockName,
+                            local: { x, y, z }
+                        });
+                    }
+
+                    index++;
+                }
+            }
+        }
+
+        // Sort blocks for layer-by-layer building:
+        // 1. By Y (bottom to top)
+        // 2. Within each layer: by Z (north to south)
+        // 3. Within each row: by X (west to east)
+        this.blocks.sort((a, b) => {
+            if (a.position.y !== b.position.y) {
+                return a.position.y - b.position.y; // Y ascending
+            }
+            if (a.position.z !== b.position.z) {
+                return a.position.z - b.position.z; // Z ascending
+            }
+            return a.position.x - b.position.x; // X ascending
+        });
+
+        this.totalBlocks = this.blocks.length;
+        this.currentIndex = 0;
+
+        // Debug: Show unique block types
+        const blockTypes = new Set(this.blocks.map(b => b.name));
+        console.log(`   Block types to place: ${Array.from(blockTypes).join(', ')}`);
+
+        console.log(`✅ Schematic loaded: ${this.totalBlocks} blocks to place`);
+
+        return {
+            width,
+            height,
+            length,
+            totalBlocks: this.totalBlocks,
+            palette: Object.keys(palette)
+        };
+    }
+
+    /**
+     * Get block name from palette by ID
+     */
+    getBlockNameById(blockId, palette) {
+        for (const [name, id] of Object.entries(palette)) {
+            if (id === blockId) {
+                return name.replace('minecraft:', '');
+            }
+        }
+        return 'stone'; // Default fallback
+    }
+
+    /**
+     * Load schematic from direct block data (from Minecraft mod)
+     * This bypasses file reading and uses exact data from the mod's preview
+     */
+    async loadFromDirectData(schematicData) {
+        console.log('📦 Loading schematic from direct mod data');
+        console.log(`   Dimensions: ${schematicData.dimensions.width}x${schematicData.dimensions.height}x${schematicData.dimensions.length}`);
+
+        if (!schematicData.blocks_data || !schematicData.blocks_data.blocks) {
+            throw new Error('No blocks data received from mod!');
+        }
+
+        const modBlocks = schematicData.blocks_data.blocks;
+        const maxExpected = schematicData.dimensions.width * schematicData.dimensions.height * schematicData.dimensions.length;
+
+        console.log(`   Received ${modBlocks.length} blocks from mod`);
+        console.log(`   Dimensions: ${schematicData.dimensions.width}x${schematicData.dimensions.height}x${schematicData.dimensions.length}`);
+        console.log(`   Expected max blocks: ${maxExpected}`);
+
+        // Sanity check - if we received way too many blocks, there's a bug
+        if (modBlocks.length > maxExpected * 2) {
+            console.error(`   ❌ ERROR: Received ${modBlocks.length} blocks but expected max ${maxExpected}`);
+            console.error(`   This indicates a bug in the mod's schematic loading!`);
+            console.error(`   First 10 blocks:`, JSON.stringify(modBlocks.slice(0, 10), null, 2));
+            throw new Error(`Invalid block data: received ${modBlocks.length} blocks for ${schematicData.dimensions.width}x${schematicData.dimensions.height}x${schematicData.dimensions.length} schematic (max ${maxExpected})`);
+        }
+
+        // Log first few blocks for debugging
+        console.log(`   First 5 blocks from mod:`, JSON.stringify(modBlocks.slice(0, 5), null, 2));
+
+        this.blocks = [];
+        const blockTypes = new Set();
+
+        // Process each block from mod
+        for (const modBlock of modBlocks) {
+            // Validate block data
+            if (!modBlock.name) {
+                console.error(`   ❌ Invalid block data: missing name`, JSON.stringify(modBlock));
+                continue;
+            }
+
+            const worldPos = {
+                x: this.origin.x + modBlock.x,
+                y: this.origin.y + modBlock.y,
+                z: this.origin.z + modBlock.z
+            };
+
+            // Convert mod block name to mineflayer format (with safety check)
+            const blockName = modBlock.name.replace('minecraft:', '');
+
+            this.blocks.push({
+                position: worldPos,
+                name: blockName,
+                local: { x: modBlock.x, y: modBlock.y, z: modBlock.z }
+            });
+
+            blockTypes.add(blockName);
+        }
+
+        // Sort blocks for layer-by-layer building
+        this.blocks.sort((a, b) => {
+            if (a.position.y !== b.position.y) {
+                return a.position.y - b.position.y;
+            }
+            if (a.position.z !== b.position.z) {
+                return a.position.z - b.position.z;
+            }
+            return a.position.x - b.position.x;
+        });
+
+        this.totalBlocks = this.blocks.length;
+        this.currentIndex = 0;
+
+        console.log(`   Block types to place: ${Array.from(blockTypes).join(', ')}`);
+        console.log(`✅ Schematic loaded from mod: ${this.totalBlocks} blocks to place`);
+
+        return {
+            width: schematicData.dimensions.width,
+            height: schematicData.dimensions.height,
+            length: schematicData.dimensions.length,
+            totalBlocks: this.totalBlocks,
+            palette: Array.from(blockTypes)
+        };
+    }
+
+    /**
+     * Start building the schematic - builds layer by layer (Y axis)
+     */
+    async startBuilding() {
+        if (this.isBuilding) {
+            console.warn('⚠️ Already building');
+            return;
+        }
+
+        this.isBuilding = true;
+        this.placedBlocks = 0;
+        this.skippedBlocks = []; // Track blocks that couldn't be placed
+
+        console.log(`🔨 Starting construction of ${this.totalBlocks} blocks...`);
+        console.log(`   Origin: (${this.origin.x}, ${this.origin.y}, ${this.origin.z})`);
+
+        // First pass: Try to place all blocks with right-click
+        await this.buildNextBlock();
+
+        // Second pass: Retry skipped blocks (they may now have adjacent blocks)
+        if (this.skippedBlocks.length > 0) {
+            console.log(`\n🔄 First pass complete (${this.placedBlocks} placed). Retrying ${this.skippedBlocks.length} skipped blocks...`);
+            this.blocks = this.skippedBlocks;
+            this.currentIndex = 0;
+            this.skippedBlocks = [];
+            this.totalBlocks = this.blocks.length;
+
+            await this.buildNextBlock();
+        }
+
+        console.log(`\n✅ Construction completed! Total placed: ${this.placedBlocks} blocks (skipped: ${this.skippedBlocks.length})`);
+        this.isBuilding = false;
+    }
+
+    /**
+     * Build the next block in sequence
+     */
+    async buildNextBlock() {
+        if (!this.isBuilding || this.currentIndex >= this.blocks.length) {
+            return; // Return to startBuilding() for retry pass
+        }
+
+        const block = this.blocks[this.currentIndex];
+        const progress = Math.round((this.currentIndex / this.totalBlocks) * 100);
+
+        console.log(`🔨 Placing block ${this.currentIndex + 1}/${this.totalBlocks} (${progress}%)`);
+        console.log(`   Position: (${block.position.x}, ${block.position.y}, ${block.position.z})`);
+        console.log(`   Type: ${block.name}`);
+
+        try {
+            // Place the block with right-click simulation
+            const placed = await this.placeBlock(block);
+
+            if (placed) {
+                // Successfully placed, move to next block
+                this.currentIndex++;
+
+                // Small delay to look natural
+                await this.sleep(100);
+
+                // Continue with next block
+                await this.buildNextBlock();
+            } else {
+                // No reference block found - skip for now, will retry later
+                console.warn(`   ⚠️ No reference block, skipping for retry`);
+                this.skippedBlocks.push(block);
+                this.currentIndex++;
+                await this.buildNextBlock();
+            }
+
+        } catch (error) {
+            console.error(`❌ Failed to place block at (${block.position.x}, ${block.position.y}, ${block.position.z}): ${error.message}`);
+
+            // Skip this block and continue
+            this.skippedBlocks.push(block);
+            this.currentIndex++;
+            await this.buildNextBlock();
+        }
+    }
+
+    /**
+     * Place a block at the specified position
+     * Uses bot.placeBlock() for right-click simulation
+     * In creative, bot should already have all blocks in inventory
+     * Returns true if placed, false if skipped
+     */
+    async placeBlock(block) {
+        const bot = this.bot;
+
+        console.log(`   DEBUG: Starting placeBlock for ${block.name} at (${block.position.x}, ${block.position.y}, ${block.position.z})`);
+
+        // Find reference block FIRST (before moving)
+        const refBlock = this.findReferenceBlock(block.position);
+
+        if (!refBlock) {
+            console.warn(`   ⚠️ No adjacent block found to place against at (${block.position.x}, ${block.position.y}, ${block.position.z})`);
+            return false; // Indicate block was not placed
+        }
+
+        console.log(`   DEBUG: refBlock found at (${refBlock.position.x}, ${refBlock.position.y}, ${refBlock.position.z})`);
+
+        // Bot needs to stay 3-4 blocks away to not be "inside" the block being placed
+        // Calculate position based on which side we're placing from
+        const face = this.getFaceToClick(block.position, refBlock.position);
+
+        // Position the bot IN THE DIRECTION of the face (not opposite)
+        // This way the bot looks AT the reference block FROM the outside
+        const closerPos = new Vec3(
+            block.position.x + face.x * 3,
+            block.position.y + face.y * 3,
+            block.position.z + face.z * 3
+        );
+
+        console.log(`   Moving closer to: (${closerPos.x}, ${closerPos.y}, ${closerPos.z})`);
+
+        // Use pathfinder to get close
+        if (!bot.pathfinder) {
+            bot.loadPlugin(pathfinder);
+        }
+        const movements = new Movements(bot);
+        bot.pathfinder.setMovements(movements);
+        bot.pathfinder.setGoal(new goals.GoalNear(closerPos.x, closerPos.y, closerPos.z, 0.5));
+
+        // Wait for arrival
+        await new Promise(resolve => {
+            const timeout = setTimeout(resolve, 2000);
+            bot.once('goal_reached', () => {
+                clearTimeout(timeout);
+                resolve();
+            });
+        });
+
+        await this.sleep(200);
+
+        console.log(`   DEBUG: Movement completed, equipping item`);
+
+        // In creative mode, use creative inventory to set the block directly
+        // This works because in creative, the bot can place any block without having it
+        if (bot.game.gameMode === 'creative') {
+            // Create the item object for the block
+            const item = bot.registry.itemsByName[block.name];
+            if (!item) {
+                console.warn(`   ⚠️ Block ${block.name} not found in registry! Skipping.`);
+                return false;
+            }
+
+            // Create a proper Item object for the item
+            // In newer mineflayer versions, we need to use the Item constructor
+            try {
+                // Use dynamic import for ES modules
+                const { default: prismarineItem } = await import('prismarine-item');
+                const Item = prismarineItem(bot.version);
+                const itemToPlace = new Item(item.id, 1, 0);
+
+                // Set the block directly in the hand slot using creative mode
+                bot.creative.setInventorySlot(36, itemToPlace);
+
+                console.log(`   ✅ Set ${block.name} in creative hand slot`);
+                await this.sleep(100);
+            } catch (err) {
+                console.warn(`   ⚠️ Failed to set creative item: ${err.message}`);
+                return false;
+            }
+        } else {
+            // Survival mode: find and equip the block from inventory
+            const item = bot.inventory.items().find(i => i.name === block.name);
+            if (!item) {
+                console.warn(`   ⚠️ Block ${block.name} not found in inventory! Skipping.`);
+                return false;
+            }
+
+            await bot.equip(item, 'hand');
+            await this.sleep(100);
+        }
+
+        console.log(`   DEBUG: Face vector: (${face.x}, ${face.y}, ${face.z})`);
+
+        // Look at the EXACT center of the reference block face
+        // This is critical - we need to look at where we're clicking
+        const lookAtPos = new Vec3(
+            refBlock.position.x + 0.5 + face.x * 0.5,
+            refBlock.position.y + 0.5 + face.y * 0.5,
+            refBlock.position.z + 0.5 + face.z * 0.5
+        );
+
+        console.log(`   Looking at face center: (${lookAtPos.x}, ${lookAtPos.y}, ${lookAtPos.z})`);
+        await bot.lookAt(lookAtPos);
+        await this.sleep(200);
+
+        console.log(`   DEBUG: Attempting bot.placeBlock()`);
+
+        try {
+            // Use bot.placeBlock() for right-click simulation
+            await bot.placeBlock(refBlock, face);
+            console.log(`   ✅ Block placed: ${block.name}`);
+            this.placedBlocks++;
+            return true; // Indicate success
+        } catch (err) {
+            console.error(`   ❌ Placement failed: ${err.message}`);
+            // Don't throw - just return false to skip this block
+            return false;
+        }
+
+        // Small delay to look natural
+        await this.sleep(100);
+    }
+
+    /**
+     * Get which face to click on the reference block
+     * Returns a Vec3 representing the face direction
+     */
+    getFaceToClick(targetPos, refPos) {
+        // Calculate direction from reference to target
+        const dx = Math.sign(targetPos.x - refPos.x);
+        const dy = Math.sign(targetPos.y - refPos.y);
+        const dz = Math.sign(targetPos.z - refPos.z);
+
+        // Return Vec3 face direction
+        return new Vec3(dx, dy, dz);
+    }
+
+    /**
+     * Find a reference block to place against
+     * Checks already placed blocks and natural terrain
+     * Also checks diagonal positions for floating blocks
+     */
+    findReferenceBlock(targetPos) {
+        const bot = this.bot;
+
+        // Check all 6 directions for a solid block
+        const directions = [
+            { x: 0, y: -1, z: 0 }, // down (check ground first - most reliable)
+            { x: 0, y: 1, z: 0 },  // up
+            { x: 1, y: 0, z: 0 },  // east
+            { x: -1, y: 0, z: 0 }, // west
+            { x: 0, y: 0, z: 1 },  // south
+            { x: 0, y: 0, z: -1 }  // north
+        ];
+
+        // First pass: check adjacent blocks
+        for (const dir of directions) {
+            const checkPos = new Vec3(
+                targetPos.x + dir.x,
+                targetPos.y + dir.y,
+                targetPos.z + dir.z
+            );
+
+            const blockAtPos = bot.blockAt(checkPos);
+
+            // Found a solid block (including already placed blocks)
+            if (blockAtPos && blockAtPos.name && blockAtPos.name !== 'air') {
+                return blockAtPos;
+            }
+        }
+
+        // Second pass: check diagonal positions (2 blocks away in horizontal directions)
+        const diagonalDirections = [
+            { x: 2, y: 0, z: 0 },   // east 2
+            { x: -2, y: 0, z: 0 },  // west 2
+            { x: 0, y: 0, z: 2 },   // south 2
+            { x: 0, y: 0, z: -2 },  // north 2
+            { x: 1, y: 0, z: 1 },   // southeast
+            { x: -1, y: 0, z: 1 },  // southwest
+            { x: 1, y: 0, z: -1 },  // northeast
+            { x: -1, y: 0, z: -1 }, // northwest
+        ];
+
+        for (const dir of diagonalDirections) {
+            const checkPos = new Vec3(
+                targetPos.x + dir.x,
+                targetPos.y + dir.y,
+                targetPos.z + dir.z
+            );
+
+            const blockAtPos = bot.blockAt(checkPos);
+
+            if (blockAtPos && blockAtPos.name && blockAtPos.name !== 'air') {
+                console.log(`   Found diagonal reference block at (${checkPos.x}, ${checkPos.y}, ${checkPos.z})`);
+                return blockAtPos;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Walk to a position like a player (using controls)
+     * Keeps 2-3 blocks distance on the exterior side of the structure
+     */
+    async walkToPosition(targetPos) {
+        const bot = this.bot;
+
+        // Calculate exterior position (2-3 blocks away from target)
+        // Prefer -X direction (west) as default exterior
+        const exteriorPos = new Vec3(
+            targetPos.x - 3,
+            targetPos.y,
+            targetPos.z
+        );
+
+        console.log(`   Moving to exterior position: (${exteriorPos.x}, ${exteriorPos.y}, ${exteriorPos.z})`);
+        console.log(`   Target block at: (${targetPos.x}, ${targetPos.y}, ${targetPos.z})`);
+
+        // Only load plugin once
+        if (!bot.pathfinder) {
+            bot.loadPlugin(pathfinder);
+            // Wait a bit for plugin to initialize
+            await this.sleep(100);
+        }
+
+        const movements = new Movements(bot);
+        bot.pathfinder.setMovements(movements);
+
+        // Use Vec3 object for GoalNear
+        const goal = new goals.GoalNear(exteriorPos.x, exteriorPos.y, exteriorPos.z, 2);
+
+        bot.pathfinder.setGoal(goal);
+
+        // Wait for arrival (max 5 seconds)
+        await new Promise(resolve => {
+            const timeout = setTimeout(() => resolve(), 5000);
+            bot.once('goal_reached', () => {
+                clearTimeout(timeout);
+                resolve();
+            });
+            bot.once('path_update', (r) => {
+                if (r.status === 'noPath') {
+                    clearTimeout(timeout);
+                    resolve(); // Continue anyway
+                }
+            });
+        });
+
+        await this.sleep(100); // Brief pause after movement
+    }
+
+    /**
+     * Get item from creative inventory
+     */
+    async getCreativeItem(blockName) {
+        const bot = this.bot;
+
+        // In creative mode, we can use /give
+        bot.chat(`/give ${bot.username} ${blockName}`);
+        await this.sleep(200);
+
+        // Try to equip it
+        const item = bot.inventory.items().find(i => i.name === blockName);
+        if (item) {
+            await bot.equip(item, 'hand');
+        }
+    }
+
+    /**
+     * Find an adjacent block position that's not air
+     */
+    findAdjacentBlock(position) {
+        const bot = this.bot;
+
+        // Check all 6 directions
+        const directions = [
+            { x: 0, y: 1, z: 0 },  // up
+            { x: 0, y: -1, z: 0 }, // down
+            { x: 1, y: 0, z: 0 },  // east
+            { x: -1, y: 0, z: 0 }, // west
+            { x: 0, y: 0, z: 1 },  // south
+            { x: 0, y: 0, z: -1 }  // north
+        ];
+
+        for (const dir of directions) {
+            const checkPos = new Vec3(
+                position.x + dir.x,
+                position.y + dir.y,
+                position.z + dir.z
+            );
+
+            const block = bot.blockAt(checkPos);
+
+            // Found a solid block to place against
+            if (block && block.name !== 'air') {
+                return checkPos;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Stop building
+     */
+    stopBuilding() {
+        this.isBuilding = false;
+        console.log('⏸️ Building stopped');
+    }
+
+    /**
+     * Get building progress
+     */
+    getProgress() {
+        return {
+            placed: this.placedBlocks,
+            total: this.totalBlocks,
+            percentage: this.totalBlocks > 0 ? Math.round((this.placedBlocks / this.totalBlocks) * 100) : 0,
+            currentBlock: this.blocks[this.currentIndex]
+        };
+    }
+
+    /**
+     * Sleep utility
+     */
+    sleep(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
+    }
+}

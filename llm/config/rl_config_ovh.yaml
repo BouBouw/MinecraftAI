@@ -1,0 +1,223 @@
+# Minecraft RL Configuration - Optimized for OVH Server
+# 60 Go RAM, 16 vCores, 400 Go SSD
+
+# Environment Configuration
+environment:
+  # Minecraft server connection
+  host: localhost
+  port: 25565
+  username: RLBOT_24_7
+
+  # World settings (optimized for training)
+  world_type: flat  # Flat world for faster navigation
+  game_mode: survival
+  difficulty: hard  # Hard mode for better learning
+
+# Agent Configuration - Optimized for 16 cores
+agent:
+  type: PPO
+
+  # Learning rates - tuned for 24/7 training
+  learning_rate: 0.0003
+  gamma: 0.995  # Higher gamma for long-term planning
+  gae_lambda: 0.95
+  clip_range: 0.2
+  entropy_coef: 0.01  # Encourage exploration
+  vf_coef: 0.5
+  max_grad_norm: 0.5
+
+  # Network architecture - larger for better performance
+  network:
+    hidden_size: 1024  # Increased from 512
+    num_layers: 4  # Deeper network
+    activation: relu
+
+# Training Configuration - Optimized for long runs
+training:
+  # Curriculum learning
+  curriculum:
+    enabled: true
+    stages:
+      # Stage 1: Basic Movement (0-50K steps)
+      - name: basic_movement
+        steps: 50000
+        actions: [0, 1, 2, 5, 8, 9, 10, 11, 12]
+        reward_scale: 1.0
+        success_threshold: 10.0
+
+      # Stage 2: Gathering (50K-250K steps)
+      - name: gathering
+        steps: 200000
+        actions: [0, 1, 2, 5, 8, 9, 10, 11, 12, 17, 21, 22, 23]
+        reward_scale: 2.0
+        success_threshold: 50.0
+
+      # Stage 3: Basic Crafting (250K-750K steps)
+      - name: basic_crafting
+        steps: 500000
+        actions: all
+        reward_scale: 5.0
+        success_threshold: 100.0
+
+      # Stage 4: Survival (750K-2.5M steps)
+      - name: survival
+        steps: 1750000
+        actions: all
+        reward_scale: 10.0
+        success_threshold: 200.0
+
+      # Stage 5: Building (2.5M-10M+ steps)
+      - name: building
+        steps: 7500000
+        actions: all
+        reward_scale: 15.0
+        success_threshold: 300.0
+
+  # Training parameters - optimized for production
+  total_timesteps: 100000000  # 100M steps (~10 days of training)
+  batch_size: 256  # Increased for better GPU/CPU utilization
+  n_steps: 4096  # Increased for better sample efficiency
+  n_epochs: 10
+
+  # Checkpointing - regular saves for 24/7 operation
+  save_freq: 500000  # Save every 500K steps (~5 hours)
+  log_freq: 100
+
+# Memory Configuration
+memory:
+  # Short-term memory
+  short_term:
+    capacity: 10000  # Increased for better replay
+    context_window: 100
+
+  # Long-term memory (SQLite)
+  long_term:
+    database_path: ./data/memories/minecraft_rl.db
+    max_memories: 10000000  # 10M memories
+    retrieval_top_k: 20
+
+  # Episodic memory
+  episodic:
+    max_episodes: 100000  # Store 100K episodes
+    episode_length: 50000  # Max episode length
+
+  # Semantic memory
+  semantic:
+    embedding_model: all-MiniLM-L6-v2
+    embedding_dim: 384
+
+# Craft Discovery Configuration
+craft_discovery:
+  enabled: true
+  max_experiments_per_episode: 100
+  experiment_strategy: curiosity
+
+  # Recipe database
+  database_path: ./data/discovered_recipes.json
+
+  # Learning parameters
+  learning_rate: 0.1
+  confidence_threshold: 0.8
+  success_bonus: 100
+  failure_penalty: -5
+
+# Reward Configuration - Tuned for long training
+rewards:
+  # Survival rewards
+  health_bonus: 0.1
+  food_bonus: 0.05
+  death_penalty: -500  # Higher penalty to avoid deaths
+
+  # Progression rewards
+  block_mined: 1.0
+  new_block_type: 20.0
+  item_crafted: 5.0
+  new_craft_discovered: 500.0  # Big bonus for discoveries
+  block_placed: 2.0
+
+  # Exploration rewards
+  new_chunk: 2.0
+  new_biome: 25.0
+  new_structure: 100.0
+
+  # Time penalty (encourage efficiency)
+  time_penalty: -0.01
+
+  # Episode rewards
+  survival_bonus: 500
+
+# Observation Space
+observation_space:
+  # All observation types enabled
+  position: true
+  rotation: true
+  velocity: true
+  on_ground: true
+  in_water: true
+  health: true
+  food: true
+  saturation: true
+  inventory: true
+  hotbar_selected: true
+  visible_blocks: true
+  visible_blocks_count: 200  # Increased vision
+  nearby_entities: true
+  nearby_entities_count: 20  # Track more entities
+  time_of_day: true
+  is_raining: true
+  biome_id: true
+  held_item: true
+  armor: true
+
+# Action Space
+action_space:
+  discrete_actions: 50
+  continuous_actions: false  # Simpler for stable training
+
+# Bridge Configuration
+bridge:
+  protocol: websocket
+  host: localhost
+  port: 8765
+
+  # Timeouts (increased for production)
+  action_timeout: 30
+  observation_timeout: 10
+
+# Logging Configuration
+logging:
+  level: INFO
+  format: json
+
+  # TensorBoard
+  tensorboard:
+    enabled: true
+    log_dir: ./data/logs/tensorboard
+
+  # File logging
+  file:
+    enabled: true
+    log_dir: ./data/logs
+    max_size: 50MB  # Larger log files
+    backup_count: 10
+
+# Model Checkpointing
+checkpointing:
+  save_dir: ./data/models
+  save_frequency: 500000  # Save every 500K steps
+  keep_last_n: 10  # Keep last 10 checkpoints
+
+# Performance Optimization
+performance:
+  # Multi-threading for 16 cores
+  num_workers: 16
+
+  # Pin to CPU (change to cuda if you have GPU)
+  device: cpu
+
+  # Batch processing
+  batch_mode: true
+
+  # Memory optimization
+  pin_memory: false
+  non_blocking: true

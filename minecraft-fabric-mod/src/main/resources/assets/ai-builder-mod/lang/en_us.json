@@ -1,0 +1,12 @@
+{
+  "key.categories.ai-builder": "AI Builder",
+  "key.ai-builder.toggle_overlay": "Toggle Schematic Overlay",
+  "key.ai-builder.move_up": "Move Schematic Up",
+  "key.ai-builder.move_down": "Move Schematic Down",
+  "key.ai-builder.move_left": "Move Schematic Left",
+  "key.ai-builder.move_right": "Move Schematic Right",
+  "key.ai-builder.move_forward": "Move Schematic Forward",
+  "key.ai-builder.move_backward": "Move Schematic Backward",
+  "key.ai-builder.validate_schematic": "Validate Schematic",
+  "key.ai-builder.save_selection": "Save Selection"
+}

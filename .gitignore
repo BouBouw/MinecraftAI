@@ -1,0 +1,79 @@
+# Minecraft AI Builder - Git Ignore
+
+# Java / Gradle
+*.class
+*.jar
+*.war
+*.ear
+.gradle/
+build/
+gradle-app.setting
+!gradle-wrapper.jar
+.gradletasknamecache
+
+# Minecraft
+*.schem
+*.litematic
+schematics/
+
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+yarn.lock
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+*.egg-info/
+dist/
+build/
+*.egg
+.pytest_cache/
+.coverage
+htmlcov/
+
+# IDEs
+.vscode/
+.idea/
+*.iml
+*.iws
+*.ipr
+.project
+.classpath
+.settings/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Models (RL)
+*.pth
+*.pt
+*.zip
+!requirements.txt
+
+# Logs
+logs/
+*.log
+
+# Temp files
+*.tmp
+*.temp

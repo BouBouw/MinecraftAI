@@ -1,0 +1,36 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(./gradlew.bat:*)",
+      "Bash(.gradlew.bat:*)",
+      "Bash(gradlew.bat:*)",
+      "Bash(cmd:*)",
+      "Bash(powershell:*)",
+      "Bash(node:*)",
+      "Bash(./gradlew:*)",
+      "Bash(cmd.exe:*)",
+      "Bash(ls:*)",
+      "Bash(powershell.exe:*)",
+      "Bash(Select-Object -First 10)",
+      "Bash(npm start)",
+      "Bash(netstat:*)",
+      "Read(//c/Users/samy7/Documents/GitHub/MinecraftAI/**)",
+      "Bash(xargs:*)",
+      "Bash(npx kill-port:*)",
+      "Bash(npm install:*)",
+      "Bash(npm run dev)",
+      "Bash(taskkill:*)",
+      "Bash(findstr:*)",
+      "Bash(timeout:*)",
+      "Bash(dir:*)",
+      "Bash(tasklist:*)",
+      "Bash(java:*)",
+      "Bash(ping:*)",
+      "Bash(npm run start)",
+      "Bash(npm run build:*)",
+      "Bash(unzip:*)",
+      "Bash(javap:*)",
+      "Bash(Select-Object -Last 50)"
+    ]
+  }
+}

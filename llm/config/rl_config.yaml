@@ -1,0 +1,204 @@
+# Minecraft RL Configuration
+
+# Environment Configuration
+environment:
+  # Minecraft server connection
+  host: localhost
+  port: 25565
+  username: RLBOT
+
+  # World settings
+  world_type: flat  # flat, normal, superflat
+  game_mode: survival  # survival, creative
+  difficulty: normal  # peaceful, easy, normal, hard
+
+# RL Agent Configuration
+agent:
+  type: PPO  # PPO, DQN, A2C
+  learning_rate: 0.0003
+  gamma: 0.99
+  gae_lambda: 0.95
+  clip_range: 0.2
+  entropy_coef: 0.01
+  vf_coef: 0.5
+  max_grad_norm: 0.5
+
+  # Network architecture
+  network:
+    hidden_size: 512
+    num_layers: 3
+    activation: relu  # relu, tanh, leaky_relu
+
+# Training Configuration
+training:
+  # Curriculum learning
+  curriculum:
+    enabled: true
+    stages:
+      - name: basic_movement
+        steps: 10000
+        actions: [MOVE, JUMP, LOOK]
+        reward_scale: 1.0
+
+      - name: gathering
+        steps: 50000
+        actions: [MOVE, JUMP, LOOK, DIG, ATTACK]
+        reward_scale: 2.0
+
+      - name: basic_crafting
+        steps: 100000
+        actions: [MOVE, JUMP, LOOK, DIG, ATTACK, CRAFT, INVENTORY]
+        reward_scale: 5.0
+
+      - name: survival
+        steps: 500000
+        actions: all
+        reward_scale: 10.0
+
+      - name: building
+        steps: 1000000
+        actions: all
+        reward_scale: 15.0
+
+  # Training parameters
+  total_timesteps: 10000000
+  batch_size: 64
+  n_steps: 2048
+  n_epochs: 10
+
+  # Save frequency
+  save_freq: 10000
+  log_freq: 1000
+
+# Memory Configuration
+memory:
+  # Short-term memory
+  short_term:
+    capacity: 1000
+    context_window: 50
+
+  # Long-term memory (SQLite)
+  long_term:
+    database_path: ./data/memories/minecraft_rl.db
+    max_memories: 1000000
+    retrieval_top_k: 10
+
+  # Episodic memory
+  episodic:
+    max_episodes: 10000
+    episode_length: 10000
+
+  # Semantic memory
+  semantic:
+    embedding_model: all-MiniLM-L6-v2
+    embedding_dim: 384
+
+# Craft Discovery Configuration
+craft_discovery:
+  enabled: true
+  max_experiments_per_episode: 50
+  experiment_strategy: curiosity  # curiosity, random, guided
+
+  # Recipe database
+  database_path: ./data/discovered_recipes.json
+
+  # Learning parameters
+  learning_rate: 0.1
+  confidence_threshold: 0.8
+  success_bonus: 100
+  failure_penalty: -5
+
+# Reward Configuration
+rewards:
+  # Survival rewards
+  health_bonus: 0.1
+  food_bonus: 0.05
+  death_penalty: -100
+
+  # Progression rewards
+  block_mined: 0.5
+  new_block_type: 10
+  item_crafted: 2
+  new_craft_discovered: 100
+  block_placed: 1
+
+  # Exploration rewards
+  new_chunk: 1
+  new_biome: 10
+  new_structure: 50
+
+  # Time penalty (encourage efficiency)
+  time_penalty: -0.01
+
+  # Episode rewards
+  survival_bonus: 100
+
+# Observation Space
+observation_space:
+  # Position and movement
+  position: true
+  rotation: true
+  velocity: true
+  on_ground: true
+  in_water: true
+  health: true
+  food: true
+  saturation: true
+
+  # Inventory
+  inventory: true
+  hotbar_selected: true
+
+  # Vision
+  visible_blocks: true
+  visible_blocks_count: 100
+  nearby_entities: true
+  nearby_entities_count: 10
+
+  # Environment
+  time_of_day: true
+  is_raining: true
+  biome_id: true
+
+  # Equipment
+  held_item: true
+  armor: true
+
+# Action Space
+action_space:
+  discrete_actions: 50
+  continuous_actions: true
+
+# Bridge Configuration
+bridge:
+  # Communication
+  protocol: websocket  # websocket, http
+  host: localhost
+  port: 8765
+
+  # Timeouts
+  action_timeout: 10  # seconds
+  observation_timeout: 5  # seconds
+
+# Logging Configuration
+logging:
+  level: INFO  # DEBUG, INFO, WARNING, ERROR
+  format: json  # json, text
+
+  # TensorBoard
+  tensorboard:
+    enabled: true
+    log_dir: ./data/logs/tensorboard
+
+  # File logging
+  file:
+    enabled: true
+    log_dir: ./data/logs
+    max_size: 10MB
+    backup_count: 5
+
+# Model Checkpointing
+checkpointing:
+  save_dir: ./data/models
+  save_frequency: 10000  # steps
+  keep_last_n: 5

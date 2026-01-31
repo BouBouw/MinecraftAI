@@ -1,0 +1,23 @@
+# Python requirements for AI/RL components
+
+# Core ML/AI
+gymnasium==0.29.1
+stable-baselines3==2.2.1
+torch==2.2.0
+torchvision==0.17.0
+numpy==1.26.3
+
+# Reinforcement Learning
+shimmy==0.2.1
+
+# Visualization
+tensorboard==2.16.2
+matplotlib==3.8.2
+pillow==10.2.0
+
+# Utilities
+tqdm==4.66.1
+opencv-python==4.9.0.80
+
+# Optional: MineDojo integration (for advanced Minecraft RL)
+# mine-dojo>=0.1.0

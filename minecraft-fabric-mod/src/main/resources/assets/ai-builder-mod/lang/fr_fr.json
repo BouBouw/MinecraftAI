@@ -1,0 +1,12 @@
+{
+  "key.categories.ai-builder": "AI Builder",
+  "key.ai-builder.toggle_overlay": "Activer/Désactiver Overlay Schematic",
+  "key.ai-builder.move_up": "Déplacer Schematic vers le Haut",
+  "key.ai-builder.move_down": "Déplacer Schematic vers le Bas",
+  "key.ai-builder.move_left": "Déplacer Schematic vers la Gauche",
+  "key.ai-builder.move_right": "Déplacer Schematic vers la Droite",
+  "key.ai-builder.move_forward": "Déplacer Schematic vers l'Avant",
+  "key.ai-builder.move_backward": "Déplacer Schematic vers l'Arrière",
+  "key.ai-builder.validate_schematic": "Valider Schematic",
+  "key.ai-builder.save_selection": "Sauvegarder Sélection"
+}

@@ -31,7 +31,8 @@
       "Bash(unzip:*)",
       "Bash(javap:*)",
       "Bash(Select-Object -Last 50)",
-      "Bash(chmod:*)"
+      "Bash(chmod:*)",
+      "Bash(ssh:*)"
     ]
   }
 }

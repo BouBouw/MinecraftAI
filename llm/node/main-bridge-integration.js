@@ -8,9 +8,12 @@
 
 import MinecraftBridgeServer from './bridge-server.js';
 import mineflayer from 'mineflayer';
-import pathfinder from 'mineflayer-pathfinder';
+import pkg from 'mineflayer-pathfinder';
 import Vec3 from 'vec3';
 import dotenv from 'dotenv';
+
+// Get pathfinder components from CommonJS module
+const { pathfinder, Movements, goals } = pkg;
 
 dotenv.config();
 

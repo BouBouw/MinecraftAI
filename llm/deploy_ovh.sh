@@ -85,25 +85,31 @@ step1_prepare_system() {
 step2_setup_project() {
     log "📁 Step 2/7: Setting up project..."
 
-    PROJECT_DIR="/opt/MinecraftAI"
+    # Auto-detect project directory
+    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-    # Clone project if not exists
-    if [ ! -d "$PROJECT_DIR" ]; then
-        log "  Cloning project to /opt/MinecraftAI..."
-        cd /opt
-
-        # If using git (replace with your repository)
-        # git clone https://github.com/your-repo/MinecraftAI.git
-
-        log "  ⚠️  Please ensure MinecraftAI project is in /opt/MinecraftAI"
-        log "  (Upload via scp/rsync if needed)"
+    if [ -d "$SCRIPT/../llm" ]; then
+        # Script is in llm/ subdirectory, go to parent
+        PROJECT_DIR="$(cd "$SCRIPT/.." && pwd)"
+    elif [ -d "$SCRIPT/llm" ]; then
+        # Script is run from project root
+        PROJECT_DIR="$SCRIPT"
+    elif [ -d "/opt/MinecraftAI" ]; then
+        # Project is in /opt (standard location)
+        PROJECT_DIR="/opt/MinecraftAI"
+    else
+        log "  ⚠️  Project directory not found in standard location"
+        log "  Using script parent directory: $SCRIPT"
+        PROJECT_DIR="$SCRIPT"
     fi
+
+    log "  Project directory: $PROJECT_DIR"
 
     cd "$PROJECT_DIR"
 
     # Make scripts executable
-    chmod +x llm/*.sh
-    chmod +x llm/monitor.sh
+    chmod +x llm/*.sh 2>/dev/null || true
+    chmod +x llm/monitor.sh 2>/dev/null || true
 
     log "✅ Project setup complete"
 }
@@ -158,18 +164,32 @@ step3_setup_python() {
 step4_setup_nodejs() {
     log "📦 Step 4/7: Setting up Node.js environment..."
 
-    cd "$PROJECT_DIR/ai-coordinator"
+    # Install RL bridge dependencies
+    if [ -d "$PROJECT_DIR/llm/node" ]; then
+        cd "$PROJECT_DIR/llm/node"
 
-    # Install dependencies
-    if [ -f "package.json" ]; then
-        log "  Installing Node.js packages..."
-        npm install > /dev/null 2>&1
-        log "  ✅ Node.js packages installed"
-    else
-        warn "  ⚠️  No package.json found in ai-coordinator"
+        if [ -f "package.json" ]; then
+            log "  Installing RL bridge packages..."
+            npm install > /dev/null 2>&1
+            log "  ✅ RL bridge packages installed"
+        fi
+
+        cd "$PROJECT_DIR"
     fi
 
-    cd "$PROJECT_DIR"
+    # Install AI Coordinator dependencies (if exists)
+    if [ -d "$PROJECT_DIR/ai-coordinator" ]; then
+        cd "$PROJECT_DIR/ai-coordinator"
+
+        if [ -f "package.json" ]; then
+            log "  Installing AI coordinator packages..."
+            npm install > /dev/null 2>&1
+            log "  ✅ AI coordinator packages installed"
+        fi
+
+        cd "$PROJECT_DIR"
+    fi
+
     log "✅ Node.js environment ready"
 }
 
@@ -220,8 +240,25 @@ step7_start_services() {
 
     cd "$PROJECT_DIR"
 
-    # Use the production launcher
-    bash llm/start-production.sh start
+    # Check if .env exists
+    if [ ! -f ".env" ]; then
+        log "  ⚠️  .env file not found, creating default..."
+        cat > .env << EOF
+# Minecraft Server Configuration
+MC_HOST=localhost
+MC_PORT=25565
+MC_USERNAME=RLAgent
+EOF
+        log "  ✅ Created .env file (please update with your MC server details)"
+    fi
+
+    # Use the RL Minecraft launcher
+    if [ -f "llm/start-rl-minecraft.sh" ]; then
+        bash llm/start-rl-minecraft.sh
+    else
+        log "  ⚠️  start-rl-minecraft.sh not found, using production launcher..."
+        bash llm/start-production.sh start
+    fi
 
     log ""
     log "🎉 DEPLOYMENT COMPLETE!"
@@ -236,13 +273,14 @@ step7_start_services() {
     echo ""
     echo -e "${BLUE}📈 TensorBoard:${NC}"
     echo -e "  ${CYAN}http://localhost:6006${NC}"
-    echo -e "  ${YELLOW}(SSH tunnel: ssh -L 6006:localhost:6006 root@your-server)${NC}"
+    echo -e "  ${YELLOW}(SSH tunnel: ssh -L 6006:localhost:6006 user@your-server)${NC}"
     echo ""
     echo -e "${BLUE}📋 Logs:${NC}"
     echo -e "  ${YELLOW}tail -f llm/data/logs/training.log${NC}"
+    echo -e "  ${YELLOW}tail -f llm/data/logs/bridge.log${NC}"
     echo ""
     echo -e "${BLUE}🛑 Stop services:${NC}"
-    echo -e "  ${YELLOW}./llm/start-production.sh stop${NC}"
+    echo -e "  ${YELLOW}./llm/start-rl-minecraft.sh stop${NC}"
     echo ""
 }
 

@@ -30,7 +30,8 @@
       "Bash(npm run build:*)",
       "Bash(unzip:*)",
       "Bash(javap:*)",
-      "Bash(Select-Object -Last 50)"
+      "Bash(Select-Object -Last 50)",
+      "Bash(chmod:*)"
     ]
   }
 }

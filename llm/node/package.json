@@ -1,0 +1,21 @@
+{
+  "name": "minecraft-rl-bridge",
+  "version": "1.0.0",
+  "description": "Bridge server connecting Python RL agent to Minecraft gameplay",
+  "type": "module",
+  "main": "main-bridge-integration.js",
+  "scripts": {
+    "start": "node main-bridge-integration.js",
+    "bridge": "node bridge-server.js",
+    "coordinator": "node rl-coordinator.js"
+  },
+  "dependencies": {
+    "mineflayer": "^4.20.1",
+    "mineflayer-pathfinder": "^2.4.4",
+    "vec3": "^0.1.8",
+    "ws": "^8.16.0",
+    "dotenv": "^16.3.1"
+  },
+  "author": "MinecraftAI",
+  "license": "MIT"
+}

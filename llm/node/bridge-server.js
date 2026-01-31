@@ -7,7 +7,7 @@
  * - WebSocket or HTTP communication
  */
 
-import WebSocket from 'ws';
+import * as WebSocket from 'ws';
 import { EventEmitter } from 'events';
 import Vec3 from 'vec3';
 
@@ -34,7 +34,7 @@ class MinecraftBridgeServer extends EventEmitter {
      * Start the WebSocket server
      */
     start() {
-        this.wss = new WebSocket.Server({ port: this.port });
+        this.wss = new WebSocket.WebSocketServer({ port: this.port });
 
         this.wss.on('listening', () => {
             console.log(`🌉 Minecraft Bridge Server listening on port ${this.port}`);

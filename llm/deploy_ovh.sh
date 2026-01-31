@@ -17,6 +17,10 @@ log() {
     echo -e "${GREEN}[$(date +'%H:%M:%S')]${NC} $1"
 }
 
+warn() {
+    echo -e "${YELLOW}[WARNING]${NC} $1"
+}
+
 error() {
     echo -e "${RED}[ERROR]${NC} $1"
     exit 1
@@ -88,19 +92,25 @@ step2_setup_project() {
     # Auto-detect project directory
     SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-    if [ -d "$SCRIPT/../llm" ]; then
+    if [ -d "$SCRIPT_DIR/../llm" ]; then
         # Script is in llm/ subdirectory, go to parent
-        PROJECT_DIR="$(cd "$SCRIPT/.." && pwd)"
-    elif [ -d "$SCRIPT/llm" ]; then
+        PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+    elif [ -d "$SCRIPT_DIR/llm" ]; then
         # Script is run from project root
-        PROJECT_DIR="$SCRIPT"
+        PROJECT_DIR="$SCRIPT_DIR"
     elif [ -d "/opt/MinecraftAI" ]; then
         # Project is in /opt (standard location)
         PROJECT_DIR="/opt/MinecraftAI"
     else
-        log "  ⚠️  Project directory not found in standard location"
-        log "  Using script parent directory: $SCRIPT"
-        PROJECT_DIR="$SCRIPT"
+        # Try using current directory
+        CURRENT_DIR="$(pwd)"
+        if [ -d "$CURRENT_DIR/llm" ]; then
+            PROJECT_DIR="$CURRENT_DIR"
+        else
+            log "  ⚠️  Project directory not found in standard location"
+            log "  Using script parent directory: $SCRIPT_DIR"
+            PROJECT_DIR="$SCRIPT_DIR"
+        fi
     fi
 
     log "  Project directory: $PROJECT_DIR"

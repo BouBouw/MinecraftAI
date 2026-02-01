@@ -326,4 +326,11 @@ def create_observation_space(config: Dict[str, Any]) -> ObservationSpace:
     Returns:
         ObservationSpace instance
     """
+    from utils.logger import get_logger
+    logger = get_logger(__name__)
+    logger.info(f"create_observation_space called with config type: {type(config)}")
+    logger.info(f"config has observation_space: {'observation_space' in config}")
+    if 'observation_space' in config:
+        logger.info(f"config['observation_space'] type: {type(config['observation_space'])}")
+        logger.info(f"config['observation_space'] keys: {list(config['observation_space'].keys())}")
     return ObservationSpace(config)

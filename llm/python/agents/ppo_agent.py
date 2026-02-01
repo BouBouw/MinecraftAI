@@ -286,13 +286,13 @@ class PPOAgent:
             # Create mini-batches
             indices = np.random.permutation(len(observations))
 
-            logger.info(f"Epoch {epoch}: len(observations)={len(observations)}, buffer_size={buffer_size}, batch_size={batch_size}")
+            # logger.info(f"Epoch {epoch}: len(observations)={len(observations)}, buffer_size={buffer_size}, batch_size={batch_size}")
 
             for start in range(0, len(observations), batch_size):
                 end = start + batch_size
                 batch_indices = indices[start:end]
 
-                logger.info(f"  Batch: start={start}, end={end}, len(batch_indices)={len(batch_indices)}")
+                # logger.info(f"  Batch: start={start}, end={end}, len(batch_indices)={len(batch_indices)}")
 
                 # Get batch data
                 batch_obs = [observations[i] for i in batch_indices]
@@ -320,19 +320,19 @@ class PPOAgent:
 
                 # Evaluate current policy
                 # Log first observation before conversion
-                if len(batch_obs) > 0:
-                    logger.info(f"  First batch_obs keys: {list(batch_obs[0].keys()) if isinstance(batch_obs[0], dict) else 'not a dict'}")
-                    if isinstance(batch_obs[0], dict) and len(batch_obs[0]) > 0:
-                        for key, val in list(batch_obs[0].items())[:3]:
-                            logger.info(f"    {key}: type={type(val)}, value={val if not isinstance(val, np.ndarray) else f'array shape {val.shape}'}")
+                # if len(batch_obs) > 0:
+                #     logger.info(f"  First batch_obs keys: {list(batch_obs[0].keys()) if isinstance(batch_obs[0], dict) else 'not a dict'}")
+                #     if isinstance(batch_obs[0], dict) and len(batch_obs[0]) > 0:
+                #         for key, val in list(batch_obs[0].items())[:3]:
+                #             logger.info(f"    {key}: type={type(val)}, value={val if not isinstance(val, np.ndarray) else f'array shape {val.shape}'}")
 
                 obs_tensors_list = [self._observation_to_tensors(obs) for obs in batch_obs]
 
-                logger.info(f"  Created obs_tensors_list: len={len(obs_tensors_list)}")
-                if len(obs_tensors_list) > 0:
-                    logger.info(f"  First obs_tensor keys: {list(obs_tensors_list[0].keys())}")
-                    for key, val in list(obs_tensors_list[0].items())[:3]:  # Log first 3 items
-                        logger.info(f"    {key}: shape={val.shape}")
+                # logger.info(f"  Created obs_tensors_list: len={len(obs_tensors_list)}")
+                # if len(obs_tensors_list) > 0:
+                #     logger.info(f"  First obs_tensor keys: {list(obs_tensors_list[0].keys())}")
+                #     for key, val in list(obs_tensors_list[0].items())[:3]:  # Log first 3 items
+                #         logger.info(f"    {key}: shape={val.shape}")
 
                 # Skip if no observations to stack
                 if len(obs_tensors_list) == 0:
@@ -344,7 +344,7 @@ class PPOAgent:
                 if len(obs_tensors_list) > 0:
                     for key in obs_tensors_list[0].keys():
                         stacked_obs[key] = torch.cat([obs[key] for obs in obs_tensors_list], dim=0)
-                    logger.info(f"  Stacked obs: keys={list(stacked_obs.keys())}, len={len(stacked_obs)}")
+                    # logger.info(f"  Stacked obs: keys={list(stacked_obs.keys())}, len={len(stacked_obs)}")
 
                     # Check if stacked_obs is empty (environment returned empty observations)
                     if len(stacked_obs) == 0:
@@ -363,18 +363,18 @@ class PPOAgent:
                     stacked_batch_size = stacked_obs[first_key].size(0)
                     action_batch_size = len(batch_actions)
 
-                    logger.info(f"obs_tensors_list size: {len(obs_tensors_list)}, stacked_batch_size: {stacked_batch_size}, action_batch_size: {action_batch_size}")
-                    logger.info(f"stacked_obs keys: {list(stacked_obs.keys())}")
-                    for key, shape in [(k, v.shape) for k, v in stacked_obs.items()]:
-                        logger.info(f"  {key}: {shape}")
+                    # logger.info(f"obs_tensors_list size: {len(obs_tensors_list)}, stacked_batch_size: {stacked_batch_size}, action_batch_size: {action_batch_size}")
+                    # logger.info(f"stacked_obs keys: {list(stacked_obs.keys())}")
+                    # for key, shape in [(k, v.shape) for k, v in stacked_obs.items()]:
+                    #     logger.info(f"  {key}: {shape}")
 
                     if stacked_batch_size != action_batch_size:
                         logger.warning(f"Batch size mismatch: stacked_obs has {stacked_batch_size}, batch_actions has {action_batch_size}. Skipping batch.")
                         continue
 
-                logger.info(f"Calling evaluate_actions with batch_actions shape: {batch_actions.shape}")
+                # logger.info(f"Calling evaluate_actions with batch_actions shape: {batch_actions.shape}")
                 log_probs, values, entropy = self.model.evaluate_actions(stacked_obs, batch_actions)
-                logger.info(f"evaluate_actions returned log_probs shape: {log_probs.shape}")
+                # logger.info(f"evaluate_actions returned log_probs shape: {log_probs.shape}")
 
                 # Calculate ratio
                 ratio = torch.exp(log_probs - batch_old_log_probs)

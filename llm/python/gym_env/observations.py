@@ -262,8 +262,8 @@ class ObservationSpace:
                 armor.get('feet', 0)
             ], dtype=np.int32)
 
-        # Debug logging
-        logger.info(f"Created observation with {len(obs)} fields: {list(obs.keys())}")
+        # Debug logging (commented out to reduce log verbosity)
+        # logger.info(f"Created observation with {len(obs)} fields: {list(obs.keys())}")
 
         return obs
 

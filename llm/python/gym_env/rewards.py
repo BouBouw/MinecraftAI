@@ -141,7 +141,7 @@ class RewardSystem:
 
         # Mining rewards - small reward per action (encourage action)
         if action_type in [17, 20, 21, 22, 23]:  # ATTACK, BREAK_BLOCK, DIG_*
-            reward += 1.0  # Fixed reward per mining action
+            reward += 2.0  # Increased from 1.0 to make mining more attractive
 
             # Big bonus for discovering new block type
             if isinstance(action, dict):

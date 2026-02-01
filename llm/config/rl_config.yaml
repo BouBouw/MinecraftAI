@@ -123,12 +123,12 @@ rewards:
   block_placed: 1
 
   # Exploration rewards
-  new_chunk: 1
-  new_biome: 10
+  new_chunk: 5  # Increased from 1 to encourage exploration
+  new_biome: 20  # Increased from 10
   new_structure: 50
 
   # Time penalty (encourage efficiency)
-  time_penalty: -0.01
+  time_penalty: -0.001  # Reduced from -0.01 to encourage more action-taking
 
   # Episode rewards
   survival_bonus: 100

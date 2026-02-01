@@ -125,6 +125,10 @@ class RewardSystem:
             )
             reward += intrinsic_reward
 
+            # Log pour voir les rewards intrinsèques
+            if abs(intrinsic_reward) > 0.001:  # Log seulement si significatif
+                logger.debug(f"Intrinsic reward: {intrinsic_reward:.6f}, Total: {reward:.6f}")
+
         # === EXTRINSIC REWARDS (Hand-crafted) ===
         if self.use_extrinsic:
             # 1. Survival rewards (minimal penalties only)

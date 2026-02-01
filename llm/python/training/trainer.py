@@ -401,10 +401,7 @@ def create_trainer(
     env = create_minecraft_env(config)
 
     # Create agent
-    agent = create_ppo_agent(
-        env=env,
-        config=config
-    )
+    agent = create_ppo_agent(config=config)
 
     # Create trainer with all components
     return Trainer(

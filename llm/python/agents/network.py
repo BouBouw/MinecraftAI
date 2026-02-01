@@ -114,7 +114,7 @@ class MinecraftEncoder(nn.Module):
 
         # Environment encoder
         self.env_encoder = nn.Sequential(
-            nn.Linear(8, 64),  # health, food, time, etc.
+            nn.Linear(9, 64),  # health, food, time, etc. + block_in_front
             nn.ReLU(),
             nn.Linear(64, 64)
         )
@@ -170,6 +170,7 @@ class MinecraftEncoder(nn.Module):
             observations.get('on_ground', torch.zeros(1, 1)).float(),
             observations.get('in_water', torch.zeros(1, 1)).float(),
             observations.get('hotbar_selected', torch.zeros(1, 1)).float() / 9,
+            observations.get('block_in_front', torch.zeros(1, 1)).float() / 1000,  # Block type in front
         ], dim=1)
         env_features = self.env_encoder(env_features)
 

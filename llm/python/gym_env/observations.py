@@ -101,6 +101,10 @@ class ObservationSpace:
         if self.obs_config.get('hotbar_selected', True):
             space_dict['hotbar_selected'] = spaces.Discrete(9)
 
+        # Block in front (for intelligent mining decisions)
+        if self.obs_config.get('block_in_front', True):
+            space_dict['block_in_front'] = spaces.Discrete(1000)  # block_id (0 = air)
+
         # Vision - visible blocks
         if self.obs_config.get('visible_blocks', True):
             count = self.obs_config.get('visible_blocks_count', 100)
@@ -226,6 +230,10 @@ class ObservationSpace:
 
         if 'hotbar_selected' in self.space.spaces:
             obs['hotbar_selected'] = raw_state.get('hotbar_selected', 0)
+
+        # Block in front (critical for mining decisions)
+        if 'block_in_front' in self.space.spaces:
+            obs['block_in_front'] = raw_state.get('block_in_front', 0)
 
         # Vision
         if 'visible_blocks' in self.space.spaces:

@@ -256,6 +256,13 @@ function startObservationLoop() {
     setInterval(() => {
         if (!botConnected || !bot.entity) return;
 
+        // Calculate block in front of bot (for intelligent mining decisions)
+        const pos = bot.entity.position;
+        const yaw = bot.entity.yaw;
+        const dx = -Math.sin(yaw) * 1;
+        const dz = Math.cos(yaw) * 1;
+        const blockInFront = bot.blockAt(pos.offset(dx, 0, dz));
+
         currentObservation = {
             position: [bot.entity.position.x, bot.entity.position.y, bot.entity.position.z],
             rotation: [bot.entity.yaw, bot.entity.pitch],
@@ -270,6 +277,7 @@ function startObservationLoop() {
                 slot?.count || 0
             ]).flat(),
             hotbar_selected: bot.quickBarSlot,
+            block_in_front: blockInFront?.type || 0,  // Type of block directly in front (0 = air)
             visible_blocks: [], // TODO: Implement raycasting for visible blocks
             nearby_entities: [], // TODO: Implement entity tracking
             time_of_day: bot.time.timeOfDay,

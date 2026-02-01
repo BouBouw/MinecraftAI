@@ -422,7 +422,7 @@ MOB_DATABASE = {
         'hostile_when': ['attacked', 'player_nearby_cub'],
         'strategies': ['avoid', 'snow_biome'],
         'description': 'Aggressive if cub is nearby',
-        'biome': 'snowy_plains', 'ice_spikes'
+        'biome': ['snowy_plains', 'ice_spikes']
     },
     'panda': {
         'type': 'passive',
@@ -884,7 +884,7 @@ MOB_DATABASE = {
         'zombification': 'zombified_piglin',
         'strategies': ['wear_gold_armor', 'barter', 'avoid_attacking'],
         'description': 'Nether traders, love gold',
-        'biome': 'nether_wastes', 'crimson_forest'
+        'biome': ['nether_wastes', 'crimson_forest']
     },
     'piglin_brute': {
         'type': 'hostile',
@@ -956,7 +956,7 @@ MOB_DATABASE = {
         'reinforcements': True,
         'strategies': ['hit_and_run', 'weapon_diamond_or_better', 'use_shield', 'iron_golem_help'],
         'description': 'Classic undead mob, breaks doors',
-        'spawns': 'night', 'caves'
+        'spawns': ['night', 'caves']
     },
     'zombie_villager': {
         'type': 'hostile',
@@ -1019,7 +1019,7 @@ MOB_DATABASE = {
         'abilities': ['underwater_combat', 'trident_attack', 'suffocate_land'],
         'strategies': ['water_combat', 'kill_from_land', 'rare_trident_drop'],
         'description': 'Underwater zombie variant, may drop trident',
-        'spawns': 'underwater', 'zombie_drown'
+        'spawns': ['underwater', 'zombie_drown']
     },
     'skeleton': {
         'type': 'hostile',
@@ -1040,7 +1040,7 @@ MOB_DATABASE = {
         'burns_in_sunlight': True,
         'strategies': ['get_up_close', 'strafe', 'use_shield'],
         'description': 'Ranged attacker, poor aim',
-        'spawns': 'night', 'caves'
+        'spawns': ['night', 'caves']
     },
     'stray': {
         'type': 'hostile',
@@ -1061,7 +1061,7 @@ MOB_DATABASE = {
         'burns_in_sunlight': True,
         'strategies': ['same_as_skeleton', 'watch_slowness'],
         'description': 'Ice variant skeleton, shoots slowness arrows',
-        'biome': 'snowy_biomes', 'ice_spikes'
+        'biome': ['snowy_biomes', 'ice_spikes']
     },
     'spider': {
         'type': 'hostile',
@@ -1083,7 +1083,7 @@ MOB_DATABASE = {
         'strategies': ['attack_from_above', 'use_sword', 'knockback'],
         'weakness': 'bane_of_arthropods',
         'description': 'Climbs walls, neutral during day',
-        'spawns': 'night', 'caves'
+        'spawns': ['night', 'caves']
     },
     'cave_spider': {
         'type': 'hostile',
@@ -1102,7 +1102,7 @@ MOB_DATABASE = {
         'abilities': ['poison', 'wall_climb'],
         'poison_duration': 7,
         'poison_damage': 2,
-        'spawns_from': 'spawner', 'mineshaft',
+        'spawns_from': ['spawner', 'mineshaft'],
         'strategies': ['attack_from_distance', 'use_milk'],
         'description': 'Poisonous cave variant',
         'weakness': 'bane_of_arthropods'
@@ -1127,7 +1127,7 @@ MOB_DATABASE = {
         'fears': ['cat', 'ocelot'],
         'strategies': ['run_away_immediately', 'use_shield', 'attack_from_distance', 'cat_defense'],
         'description': 'Silent approach, deadly explosion',
-        'spawns': 'night', 'caves'
+        'spawns': ['night', 'caves']
     },
     'silverfish': {
         'type': 'hostile',
@@ -1165,7 +1165,7 @@ MOB_DATABASE = {
         'potions': ['harm', 'poison', 'slowness', 'healing'],
         'strategies': ['attack_from_distance', 'use_shield', 'burn'],
         'description': 'Throws splash potions, drinks healing potions',
-        'spawns': 'swamp_hut', 'raids'
+        'spawns': ['swamp_hut', 'raids']
     },
 
     # ============================================================
@@ -1242,7 +1242,7 @@ MOB_DATABASE = {
         'spawn_condition': 'nether_wastes',
         'strategies': ['shoot_in_mid_air', 'hide_terrain', 'reflect_fireballs'],
         'description': 'Flying, shoots explosive fireballs',
-        'spawns': 'nether_wastes', 'soul_sand_valley'
+        'spawns': ['nether_wastes', 'soul_sand_valley']
     },
     'magma_cube': {
         'type': 'hostile',
@@ -1264,7 +1264,7 @@ MOB_DATABASE = {
         'split_into': ['medium_magma_cube', 'small_magma_cube'],
         'strategies': ['water_bucket', 'knockback', 'attack_final_small'],
         'description': 'Swims in lava, splits on death',
-        'spawns': 'nether_wastes', 'basalt_deltas'
+        'spawns': ['nether_wastes', 'basalt_deltas']
     },
     'zoglin': {
         'type': 'hostile',
@@ -1284,7 +1284,7 @@ MOB_DATABASE = {
         'ignore': ['other_zoglin'],
         'strategies': ['avoid', 'attack_from_distance'],
         'description': 'Zombified hoglin, attacks everything',
-        'spawns': 'hoglin_overworld', 'piglin_become'
+        'spawns': ['hoglin_overworld', 'piglin_become']
     },
 
     # ============================================================
@@ -1353,7 +1353,7 @@ MOB_DATABASE = {
         'weapon': 'iron_axe',
         'abilities': ['charge_attack', 'johnny_attack'],
         'johnny_chance': 0.01,  # Attacks all mobs
-        'spawns': 'raid', 'woodland_mansion', 'patrol',
+        'spawns': ['raid', 'woodland_mansion', 'patrol'],
         'strategies': ['use_shield', 'attack_from_distance'],
         'description': 'Charges with axe, Johnny variant attacks all'
     },
@@ -1375,7 +1375,7 @@ MOB_DATABASE = {
         'attacks': ['vex_summon', 'fang_lines', 'woolo_teleport'],
         'strategies': ['kill_quickly', 'use_shield', 'avoid_fangs'],
         'description': 'Summons vexes, deadly fang attack',
-        'spawns': 'raid', 'woodland_mansion'
+        'spawns': ['raid', 'woodland_mansion']
     },
     'vex': {
         'type': 'hostile',
@@ -1412,7 +1412,7 @@ MOB_DATABASE = {
         'danger_level': 'medium',
         'weapon': 'crossbow',
         'abilities': ['ranged_attack', 'patrol'],
-        'spawns': 'raid', 'patrol', 'woodland_mansion',
+        'spawns': ['raid', 'patrol', 'woodland_mansion'],
         'strategies': ['use_shield', 'get_up_close', 'dodge_arrows'],
         'description': 'Crossbow user, patrols with banner',
         'patrol_captain': 'ominous_banner'
@@ -1471,7 +1471,7 @@ MOB_DATABASE = {
         'abilities': ['throw_potions', 'drink_potions', 'heal'],
         'strategies': ['attack_from_distance', 'burn'],
         'description': 'Throws splash potions',
-        'spawns': 'swamp_hut', 'raid'
+        'spawns': ['swamp_hut', 'raid']
     },
 
     # ============================================================
@@ -1561,7 +1561,7 @@ MOB_DATABASE = {
         'mining_fatigue_level': 3,
         'strategies': ['kill_underwater', 'use_sword', 'avoid_laser', 'milk_fatigue'],
         'description': 'Ocean monument boss, mining fatigue',
-        'spawns': 'ocean_monument', 'raid_defense'
+        'spawns': ['ocean_monument', 'raid_defense']
     },
     'red_dragon': {
         'type': 'boss',
@@ -1654,7 +1654,7 @@ MOB_DATABASE = {
         'strategies': ['give_item', 'follow_note_block'],
         'description': 'Collects and delivers items, dances to music',
         'vote_winner': True,
-        'spawns': 'pillager_outpost', 'woodland_mansion'
+        'spawns': ['pillager_outpost', 'woodland_mansion']
     },
     'villager': {
         'type': 'passive',

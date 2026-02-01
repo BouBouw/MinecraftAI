@@ -293,7 +293,7 @@ BIOME_DATABASE = {
         'special_features': ['no_rain', 'unique_terrain', 'abundant_gold'],
         'danger_level': 'low',
         'priority': 'medium',
-        'recommended_for': 'gold_mining', 'terracotta'
+        'recommended_for': ['gold_mining', 'terracotta']
     },
     'eroded_badlands': {
         'category': 'overworld',
@@ -388,7 +388,7 @@ BIOME_DATABASE = {
         'special_features': ['no_hostile_mobs', 'mycelium', 'huge_mushroom_growth'],
         'danger_level': 'none',
         'priority': 'high',
-        'recommended_for': 'mushroom_farming', 'mooshroom_farm'
+        'recommended_for': ['mushroom_farming', 'mooshroom_farm']
     },
     'beach': {
         'category': 'overworld',
@@ -446,7 +446,7 @@ BIOME_DATABASE = {
         'special_features': ['abundant_flowers', 'tall_grass', 'horse_spawn'],
         'danger_level': 'low',
         'priority': 'medium',
-        'recommended_for': 'horse_taming', 'flower_farming'
+        'recommended_for': ['horse_taming', 'flower_farming']
     },
     'cherry_grove': {
         'category': 'overworld',
@@ -496,7 +496,7 @@ BIOME_DATABASE = {
         'special_features': ['snowy_peaks', 'goats', 'emeralds', 'ice'],
         'danger_level': 'medium',
         'priority': 'medium',
-        'recommended_for': 'emerald_mining', 'snow'
+        'recommended_for': ['emerald_mining', 'snow']
     },
     'frozen_peaks': {
         'category': 'overworld',
@@ -546,7 +546,7 @@ BIOME_DATABASE = {
         'special_features': ['glowing_berries', 'azalea_trees', 'spore_blossom', 'water_lakes'],
         'danger_level': 'medium',
         'priority': 'high',
-        'recommended_for': 'moss_blocks', 'glow_berries', 'axolotl'
+        'recommended_for': ['moss_blocks', 'glow_berries', 'axolotl']
     },
     'deep_dark': {
         'category': 'underground',
@@ -561,7 +561,7 @@ BIOME_DATABASE = {
         'special_features': ['warden_spawn', 'darkness', 'ancient_city', 'sculk_spreading'],
         'danger_level': 'extreme',
         'priority': 'medium',
-        'recommended_for': 'ancient_city_loot', 'sculk'
+        'recommended_for': ['ancient_city_loot', 'sculk']
     },
     'deepslate': {
         'category': 'underground',
@@ -596,7 +596,7 @@ BIOME_DATABASE = {
         'special_features': ['fishing', 'seagrass', 'ruins'],
         'danger_level': 'medium',
         'priority': 'medium',
-        'recommended_for': 'fishing', 'ocean_monument'
+        'recommended_for': ['fishing', 'ocean_monument']
     },
     'deep_ocean': {
         'category': 'ocean',
@@ -611,7 +611,7 @@ BIOME_DATABASE = {
         'special_features': ['ocean_monument', 'guardians', 'deep_water'],
         'danger_level': 'high',
         'priority': 'medium',
-        'recommended_for': 'ocean_monument', 'sponges'
+        'recommended_for': ['ocean_monument', 'sponges']
     },
     'frozen_ocean': {
         'category': 'ocean',
@@ -655,7 +655,7 @@ BIOME_DATABASE = {
         'special_features': ['coral', 'sea_pickles'],
         'danger_level': 'medium',
         'priority': 'medium',
-        'recommended_for': 'coral', 'sea_pickles'
+        'recommended_for': ['coral', 'sea_pickles']
     },
     'warm_ocean': {
         'category': 'ocean',
@@ -670,7 +670,7 @@ BIOME_DATABASE = {
         'special_features': ['coral_reefs', 'sea_pickles', 'no_salmon'],
         'danger_level': 'medium',
         'priority': 'medium',
-        'recommended_for': 'coral_blocks', 'tropical_fish'
+        'recommended_for': ['coral_blocks', 'tropical_fish']
     },
 
     # ============================================================
@@ -690,7 +690,7 @@ BIOME_DATABASE = {
         'special_features': ['nether_fortress_spawn', 'piglin_neutral'],
         'danger_level': 'high',
         'priority': 'medium',
-        'recommended_for': 'nether_quartz', 'glowstone'
+        'recommended_for': ['nether_quartz', 'glowstone']
     },
     'crimson_forest': {
         'category': 'nether',
@@ -705,7 +705,7 @@ BIOME_DATABASE = {
         'special_features': ['hoglin_spawn', 'crimson_trees'],
         'danger_level': 'high',
         'priority': 'high',
-        'recommended_for': 'hoglin_farming', 'crimson_stem'
+        'recommended_for': ['hoglin_farming', 'crimson_stem']
     },
     'warped_forest': {
         'category': 'nether',
@@ -720,7 +720,7 @@ BIOME_DATABASE = {
         'special_features': ['enderman_spawn', 'safe_from_piglins'],
         'danger_level': 'low',
         'priority': 'high',
-        'recommended_for': 'safe_base', 'warped_stem'
+        'recommended_for': ['safe_base', 'warped_stem']
     },
     'soul_sand_valley': {
         'category': 'nether',
@@ -735,7 +735,7 @@ BIOME_DATABASE = {
         'special_features': ['soul_fire', 'basalt_deltas', 'skeleton_horses'],
         'danger_level': 'high',
         'priority': 'medium',
-        'recommended_for': 'soul_sand', 'soul_soil'
+        'recommended_for': ['soul_sand', 'soul_soil']
     },
     'basalt_deltas': {
         'category': 'nether',
@@ -750,7 +750,7 @@ BIOME_DATABASE = {
         'special_features': ['basalt_columns', 'magma_cube_spawn', 'no_piglin'],
         'danger_level': 'high',
         'priority': 'medium',
-        'recommended_for': 'basalt', 'blackstone', 'magma_cream'
+        'recommended_for': ['basalt', 'blackstone', 'magma_cream']
     },
 
     # ============================================================
@@ -770,7 +770,7 @@ BIOME_DATABASE = {
         'special_features': ['ender_dragon_fight', 'end_gateway', 'outer_islands'],
         'danger_level': 'extreme',
         'priority': 'high',
-        'recommended_for': 'ender_dragon', 'elytra'
+        'recommended_for': ['ender_dragon', 'elytra']
     },
     'end_midlands': {
         'category': 'end',
@@ -785,7 +785,7 @@ BIOME_DATABASE = {
         'special_features': ['end_city_spawn', 'purpur_blocks', 'shulkers'],
         'danger_level': 'high',
         'priority': 'high',
-        'recommended_for': 'end_city', 'elytra', 'purpur'
+        'recommended_for': ['end_city', 'elytra', 'purpur']
     },
     'end_highlands': {
         'category': 'end',

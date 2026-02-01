@@ -264,14 +264,14 @@ COMMON_CIRCUITS = {
     'addition': {
         'description': 'Adds two signals',
         'components': ['3 comparators', 'redstone_wire'],
-        'input': 'signal_A', 'signal_B',
+        'input': ['signal_A', 'signal_B'],
         'output': 'A + B (capped at 15)',
         'uses': ['signal_combination', 'counting']
     },
     'subtraction': {
         'description': 'Subtracts signals',
         'components': ['1 comparator (subtract mode)'],
-        'input': 'signal_from_side', 'signal_from_back',
+        'input': ['signal_from_side', 'signal_from_back'],
         'output': 'back - side (min 0)',
         'uses': ['signal_subtraction', 'comparators']
     },
@@ -595,7 +595,7 @@ TIPS_AND_TRICKS = {
         'description': 'Slime block flying machines',
         'components': ['slime_block', 'honey_block', 'piston', 'sticky_piston'],
         'mechanism': 'alternating_slime_honey_propulsion',
-        'uses': 'horizontal_transport', 'farms'
+        'uses': ['horizontal_transport', 'farms']
     }
 }
 

@@ -113,7 +113,7 @@ class RealMinecraftTrainer:
 
             # Start episode in memory
             curriculum_stage = self.curriculum.get_current_stage()
-            episode_id = self.memory.episodic.start_episode(curriculum_stage)
+            episode_id = self.memory.episodic.start_episode(self.curriculum.current_stage_idx)
 
             # Episode loop
             while not done and steps < total_timesteps:
@@ -172,11 +172,12 @@ class RealMinecraftTrainer:
             self.curriculum.update_progress(steps, self.current_episode_reward)
 
             # Save memories
-            self.memory.long_term.store_episode_summary(episode_id, {
-                'total_reward': self.current_episode_reward,
-                'length': episode_steps,
-                'curriculum_stage': curriculum_stage
-            })
+            # TODO: Implement store_episode_summary in long_term memory
+            # self.memory.long_term.store_episode_summary(episode_id, {
+            #     'total_reward': self.current_episode_reward,
+            #     'length': episode_steps,
+            #     'curriculum_stage': curriculum_stage.name if curriculum_stage else None
+            # })
 
             # Periodic logging
             if episode_num % 10 == 0:

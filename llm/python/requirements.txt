@@ -13,11 +13,9 @@ scipy>=1.11.0
 
 # Communication
 websockets>=12.0
-ws>=1.0
 
 # Logging and Monitoring
 tensorboard>=2.14.0
-logging>=0.4.9.6
 
 # Memory and Embeddings
 sentence-transformers>=2.2.0
@@ -25,9 +23,7 @@ scikit-learn>=1.3.0
 
 # Utilities
 tqdm>=4.65.0
-rich>=13.0.0
 
 # Optional but recommended
 opencv-python>=4.8.0   # For visual processing
 pillow>=10.0.0        # For image handling
-matplotlib>=3.7.0     # For plotting

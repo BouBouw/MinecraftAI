@@ -2,7 +2,8 @@
 # Stream Minecraft Bot to Twitch from VPS (Headless)
 # Simple version - Twitch only, no OBS needed
 
-STREAM_DIR="/home/server/minecraft-stream"
+# Auto-detect home directory
+STREAM_DIR="$HOME/minecraft-stream"
 ENV_FILE="$STREAM_DIR/.env"
 
 # Load configuration

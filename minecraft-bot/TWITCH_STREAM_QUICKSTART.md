@@ -8,14 +8,14 @@
 
 ```bash
 # Sur votre VPS
-mkdir -p /home/server/minecraft-stream/logs
+mkdir -p ~/minecraft-stream/logs
 cd ~/MinecraftAI/minecraft-bot
 ```
 
 ### 2. Créer le fichier de configuration
 
 ```bash
-nano /home/server/minecraft-stream/.env
+nano ~/minecraft-stream/.env
 ```
 
 Coller ceci (remplacer YOUR_KEY par votre vraie clé):
@@ -62,7 +62,7 @@ bash ~/MinecraftAI/minecraft-bot/start-twitch-stream.sh
 pkill -f 'ffmpeg.*rtmp'
 
 # Voir les logs
-tail -f /home/server/minecraft-stream/logs/ffmpeg.log
+tail -f ~/minecraft-stream/logs/ffmpeg.log
 
 # Vérifier le statut
 ps aux | grep ffmpeg
@@ -70,7 +70,7 @@ ps aux | grep ffmpeg
 
 ## ⚙️ Paramètres de Qualité
 
-Éditez `/home/server/minecraft-stream/.env`:
+Éditez `~/minecraft-stream/.env`:
 
 ```bash
 # 1080p @ 30fps (nécessite ~5 Mbps upload)
@@ -136,7 +136,7 @@ Pour implémenter le vrai POV, il faut:
 
 ```bash
 # Vérifier votre clé Twitch
-cat /home/server/minecraft-stream/.env
+cat ~/minecraft-stream/.env
 
 # Vérifier que ffmpeg est installé
 which ffmpeg
@@ -149,7 +149,7 @@ ffmpeg -f lavfi -i testsrc -f flv rtmp://live.twitch.tv/app/VOTRE_CLE
 
 ```bash
 # Réduire le bitrate dans .env
-nano /home/server/minecraft-stream/.env
+nano ~/minecraft-stream/.env
 # Changez: STREAM_BITRATE=2000k
 ```
 
@@ -181,4 +181,4 @@ STREAM_BITRATE=2000k
 
 ---
 
-**Besoin d'aide?** Vérifiez les logs: `tail -f /home/server/minecraft-stream/logs/ffmpeg.log`
+**Besoin d'aide?** Vérifiez les logs: `tail -f ~/minecraft-stream/logs/ffmpeg.log`

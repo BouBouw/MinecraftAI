@@ -16,13 +16,13 @@ fi
 
 # Créer les dossiers
 echo "📁 Création des dossiers..."
-mkdir -p /home/server/minecraft-stream/logs
-mkdir -p /home/server/minecraft-stream/screenshots
+mkdir -p "$HOME/minecraft-stream/logs"
+mkdir -p "$HOME/minecraft-stream/screenshots"
 
 # Créer la configuration par défaut
-if [ ! -f /home/server/minecraft-stream/.env ]; then
+if [ ! -f "$HOME/minecraft-stream/.env" ]; then
     echo "📝 Création de la configuration..."
-    cat > /home/server/minecraft-stream/.env << 'EOF'
+    cat > "$HOME/minecraft-stream/.env" << 'EOF'
 # Configuration du Stream
 STREAM_RESOLUTION=1280x720
 STREAM_FPS=30

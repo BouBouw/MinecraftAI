@@ -2,7 +2,8 @@
 # Stream REAL Minecraft Bot POV using screenshots
 # This captures actual bot gameplay and streams to platforms
 
-STREAM_DIR="/home/server/minecraft-stream"
+# Auto-detect home directory
+STREAM_DIR="$HOME/minecraft-stream"
 ENV_FILE="$STREAM_DIR/.env"
 SCREENSHOT_DIR="$STREAM_DIR/screenshots"
 

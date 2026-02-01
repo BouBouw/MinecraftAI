@@ -404,9 +404,8 @@ async function executeAction(action) {
                     await bot.equip(food, 'hand');
                     await bot.consume();
                     console.log(`🍎 Ate ${food.name}`);
-                } else {
-                    console.log(`⚠️ No food in inventory to eat`);
                 }
+                // Silent skip when no food - normal during early learning
             } catch (err) {
                 console.log(`⚠️ Eat failed: ${err.message}`);
             }

@@ -281,20 +281,7 @@ class CurriculumRewardShaper:
     def __init__(self, config: Dict[str, Any]):
         """Initialize curriculum reward shaper"""
         self.config = config
-
-        # Handle both plain dicts and Config objects with dot-notation
-        if hasattr(config, 'get') and callable(config.get):
-            # Try nested access for plain dicts
-            training = config.get('training', {}) if isinstance(config.get('training', {}), dict) else {}
-            self.curriculum_config = training.get('curriculum', {})
-        else:
-            # Fallback for Config objects with custom get()
-            from utils.config import Config
-            if isinstance(config, Config):
-                self.curriculum_config = config.get('training.curriculum', {})
-            else:
-                self.curriculum_config = {}
-
+        self.curriculum_config = config.get('training.curriculum', {})
         self.current_stage = 0
         self.stages = self.curriculum_config.get('stages', [])
 

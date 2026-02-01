@@ -36,11 +36,6 @@ class MinecraftEnv(gym.Env):
             config: Configuration dictionary
             bridge_client: Client for communicating with Node.js bridge
         """
-        from utils.logger import get_logger
-        logger = get_logger(__name__)
-        logger.info(f"MinecraftEnv.__init__ called with config type: {type(config)}")
-        logger.info(f"config has observation_space: {'observation_space' in config if hasattr(config, '__contains__') else 'N/A (not dict-like)'}")
-
         super().__init__()
 
         self.config = config
@@ -65,10 +60,7 @@ class MinecraftEnv(gym.Env):
 
         # Curriculum stage
         self.current_stage = 0
-        # Use nested access for plain dicts (config is now a plain dict, not Config object)
-        training = config.get('training', {})
-        curriculum = training.get('curriculum', {})
-        self.curriculum_stages = curriculum.get('stages', [])
+        self.curriculum_stages = config.get('training.curriculum.stages', [])
         self.available_actions = ActionType.get_basic_actions()
 
     def reset(

@@ -28,7 +28,7 @@ class ObservationSpace:
         Initialize observation space
 
         Args:
-            config: Configuration dictionary
+            config: Configuration dictionary (plain dict or Config object)
         """
         from utils.logger import get_logger
         logger = get_logger(__name__)
@@ -37,19 +37,28 @@ class ObservationSpace:
 
         # Debug: log type of config and its keys
         logger.info(f"config type: {type(config)}")
-        logger.info(f"config keys: {list(config.keys()) if isinstance(config, dict) else 'not a dict'}")
 
-        # Check if config has observation_space section
-        if isinstance(config, dict):
-            if 'observation_space' in config:
-                logger.info(f"config has 'observation_space' key: {config['observation_space']}")
-            else:
-                logger.warning(f"config does NOT have 'observation_space' key. Available keys: {list(config.keys())}")
+        # Handle both Config objects and plain dicts
+        # Check if config is a Config object (has 'config' attribute)
+        if hasattr(config, 'config') and hasattr(config, 'get'):
+            # This is a Config object - extract the raw dict
+            raw_config = config.config
+            logger.info("Detected Config object, extracting raw config dict")
+        elif isinstance(config, dict):
+            # This is already a plain dict
+            raw_config = config
+            logger.info("Detected plain dict")
+        else:
+            # Unknown type - try to use it as-is
+            raw_config = config
+            logger.warning(f"Unknown config type: {type(config)}")
 
-        self.obs_config = config.get('observation_space', {})
+        # Now extract observation_space section using plain dict access
+        self.obs_config = raw_config.get('observation_space', {}) if isinstance(raw_config, dict) else {}
 
         # Debug logging
-        logger.info(f"Initializing ObservationSpace with obs_config: {self.obs_config}")
+        logger.info(f"obs_config type: {type(self.obs_config)}")
+        logger.info(f"obs_config has {len(self.obs_config)} keys: {list(self.obs_config.keys())}")
 
         # Build observation space
         self.space = self._build_observation_space()
@@ -62,16 +71,7 @@ class ObservationSpace:
         Returns:
             Dictionary observation space
         """
-        from utils.logger import get_logger
-        logger = get_logger(__name__)
-
         space_dict = {}
-
-        # Debug: Log what obs_config.get() returns for first few fields
-        logger.info(f"obs_config type: {type(self.obs_config)}")
-        logger.info(f"obs_config.get('position', True) = {self.obs_config.get('position', True)}")
-        logger.info(f"obs_config.get('rotation', True) = {self.obs_config.get('rotation', True)}")
-        logger.info(f"obs_config.get('health', True) = {self.obs_config.get('health', True)}")
 
         # Position and movement
         if self.obs_config.get('position', True):
@@ -321,16 +321,9 @@ def create_observation_space(config: Dict[str, Any]) -> ObservationSpace:
     Factory function to create observation space
 
     Args:
-        config: Configuration dictionary
+        config: Configuration dictionary (plain dict or Config object)
 
     Returns:
         ObservationSpace instance
     """
-    from utils.logger import get_logger
-    logger = get_logger(__name__)
-    logger.info(f"create_observation_space called with config type: {type(config)}")
-    logger.info(f"config has observation_space: {'observation_space' in config}")
-    if 'observation_space' in config:
-        logger.info(f"config['observation_space'] type: {type(config['observation_space'])}")
-        logger.info(f"config['observation_space'] keys: {list(config['observation_space'].keys())}")
     return ObservationSpace(config)

@@ -390,15 +390,14 @@ def create_trainer(
     Factory function to create trainer
 
     Args:
-        config: Configuration dictionary
+        config: Configuration dictionary (plain dict or Config object)
 
     Returns:
         Trainer instance
     """
-    # Ensure we have a plain dict, not a Config object
+    # If None, get the global config
     if config is None:
-        config_obj = get_config()
-        config = config_obj.config if hasattr(config_obj, 'config') else config_obj
+        config = get_config()
 
     # Create environment
     env = create_minecraft_env(config)

@@ -12,6 +12,9 @@ import time
 from .observations import ObservationSpace, create_observation_space
 from .actions import ActionSpace, ActionType, create_action_space
 from .rewards import RewardSystem, CurriculumRewardShaper, create_reward_system
+from utils.logger import get_logger
+
+logger = get_logger(__name__)
 
 
 class MinecraftEnv(gym.Env):
@@ -89,13 +92,43 @@ class MinecraftEnv(gym.Env):
         # Request reset from bridge
         if self.bridge:
             try:
-                self.current_state = self.bridge.reset_environment()
+                # Connect bridge if not already connected
+                if not self.bridge.connected:
+                    import asyncio
+                    try:
+                        # Try to connect to the bridge
+                        loop = asyncio.get_event_loop()
+                        if loop.is_running():
+                            # If loop is running, create task
+                            asyncio.create_task(self.bridge.connect())
+                        else:
+                            # If loop is not running, run directly
+                            loop.run_until_complete(self.bridge.connect())
+                    except RuntimeError:
+                        # No event loop, create new one
+                        asyncio.run(self.bridge.connect())
+
+                # Get initial state via async bridge
+                import asyncio
+                try:
+                    loop = asyncio.get_event_loop()
+                    if loop.is_running():
+                        # Can't wait in running loop, use default state
+                        logger.warning("Event loop is running, using default state")
+                        self.current_state = self._create_default_state()
+                    else:
+                        self.current_state = loop.run_until_complete(self.bridge.reset_environment())
+                except RuntimeError:
+                    # No event loop, create new one
+                    self.current_state = asyncio.run(self.bridge.reset_environment())
+
             except Exception as e:
-                print(f"Error resetting environment via bridge: {e}")
+                logger.error(f"Error resetting environment via bridge: {e}")
                 # Create default state
                 self.current_state = self._create_default_state()
         else:
             # No bridge - use mock state for testing
+            logger.warning("No bridge provided - using mock state for testing")
             self.current_state = self._create_default_state()
 
         # Create observation
@@ -127,13 +160,27 @@ class MinecraftEnv(gym.Env):
         # Execute action via bridge
         if self.bridge:
             try:
-                next_state, success = self.bridge.execute_action(action, self.current_state)
+                import asyncio
+                try:
+                    loop = asyncio.get_event_loop()
+                    if loop.is_running():
+                        # Can't wait in running loop, simulate instead
+                        logger.warning("Event loop is running, simulating action")
+                        next_state = self._simulate_action(action, self.current_state)
+                        success = True
+                    else:
+                        next_state, success = loop.run_until_complete(self.bridge.execute_action(action, self.current_state))
+                except RuntimeError:
+                    # No event loop, create new one
+                    result = asyncio.run(self.bridge.execute_action(action, self.current_state))
+                    next_state, success = result
             except Exception as e:
-                print(f"Error executing action via bridge: {e}")
+                logger.error(f"Error executing action via bridge: {e}")
                 next_state = self.current_state
                 success = False
         else:
             # No bridge - simulate action
+            logger.warning("No bridge provided - simulating action")
             next_state = self._simulate_action(action, self.current_state)
             success = True
 

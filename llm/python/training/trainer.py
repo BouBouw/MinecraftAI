@@ -15,6 +15,7 @@ from memory.memory_manager import MemoryManager, get_database_manager
 from crafting.craft_discovery import CraftDiscoverySystem
 from training.curriculum import Curriculum, RewardShaper, create_curriculum
 from gym_env.minecraft_env import MinecraftEnv, create_minecraft_env
+from bridge.minecraft_bot_bridge import MinecraftBotBridge
 from utils.config import get_config
 from utils.logger import get_logger, log_episode_start, log_episode_end
 
@@ -405,8 +406,16 @@ def create_trainer(
     if config is None:
         config = get_config()
 
-    # Create environment
-    env = create_minecraft_env(config)
+    # Create Minecraft bridge client
+    bridge_config = config.get('bridge', {})
+    bridge_host = bridge_config.get('host', 'localhost')
+    bridge_port = bridge_config.get('port', 8765)
+
+    logger.info(f"Creating Minecraft bridge client: {bridge_host}:{bridge_port}")
+    bridge = MinecraftBotBridge(host=bridge_host, port=bridge_port)
+
+    # Create environment with bridge
+    env = create_minecraft_env(config, bridge_client=bridge)
 
     # Create agent
     agent = create_ppo_agent(config=config)

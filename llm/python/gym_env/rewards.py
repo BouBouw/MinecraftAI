@@ -145,22 +145,26 @@ class RewardSystem:
             action_type = action.get('action_type', 0)
             target_block = action.get('target_block', 0)
 
-        # Mining rewards - increased to make it the PRIMARY way to earn rewards
+        # Mining rewards - ONLY give reward if actually mined something (not air!)
         if action_type in [17, 20, 21, 22, 23]:  # ATTACK, BREAK_BLOCK, DIG_*
-            reward += 5.0  # Increased from 2.0 - mining is critical!
+            # SMALL exploration bonus for TRYING (reduced from 3.0 to 1.0)
+            # This encourages trying to mine, but not spamming
+            reward += 1.0
 
-            # EXPLORATION BONUS: Reward just for TRYING to attack/mine
-            # This encourages the bot to USE the ATTACK action even before learning it mines blocks
-            reward += 3.0  # Bonus just for attempting to mine (helps early exploration)
-
-            # Big bonus for discovering new block type
+            # BIG bonus only if we actually discovered a new block type
+            # (meaning we actually mined something, not air)
             if isinstance(action, dict):
                 mined_block = target_block
-                if mined_block not in self.discovered_blocks:
+                if mined_block not in self.discovered_blocks and mined_block != 0:  # 0 = air
                     self.discovered_blocks.add(mined_block)
-                    reward += 50.0  # Increased from 20.0 - HUGE discovery bonus
-
-                self.episode_mined_blocks[mined_block] += 1
+                    reward += 50.0  # HUGE discovery bonus for NEW block type
+                    logger.info(f"🎉 Discovered new block type: {mined_block}")
+                elif mined_block != 0:  # Known block type, but still mined something
+                    reward += 5.0  # Standard mining reward
+                    self.episode_mined_blocks[mined_block] += 1
+                else:  # mined_block == 0 (air) - wasted action!
+                    reward -= 2.0  # PENALTY for mining air (discourage spam)
+                    logger.debug("⚠️ Tried to mine air - penalty applied")
 
         # Crafting rewards - higher value (more complex)
         elif action_type in [27, 28]:  # CRAFT_ITEM, CRAFT_UNKNOWN

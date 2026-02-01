@@ -139,10 +139,13 @@ class Curriculum:
             {
                 'name': 'basic_movement',
                 'steps': 50000,  # 50K steps
-                'actions': [0, 1, 17],  # SIMPLIFIED: NOOP, MOVE_FORWARD, ATTACK (mining!)
+                'actions': [0, 1, 2, 3, 4, 5, 8, 9, 10, 11, 17],  # EXPANDED: Basic movement + LOOK + mining
+                # 0=NOOP, 1=FORWARD, 2=BACKWARD, 3=LEFT, 4=RIGHT, 5=JUMP
+                # 8=LOOK_LEFT, 9=LOOK_RIGHT, 10=LOOK_UP, 11=LOOK_DOWN
+                # 17=ATTACK/MINE
                 'reward_scale': 1.0,
                 'success_threshold': 15000.0,  # Must avg 15K reward and be VERY stable
-                'description': 'Learn basic movement and mining (ONLY 3 actions!)'
+                'description': 'Learn basic movement, looking around, and mining (11 actions)'
             },
             {
                 'name': 'gathering',

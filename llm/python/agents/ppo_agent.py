@@ -229,8 +229,10 @@ class PPOAgent:
 
             if self.action_count % 100 == 0:
                 action_name = self._get_action_name(action.item())
-                logger.info(f"🎯 Action #{self.action_count}: {action.item()} ({action_name}) | "
-                           f"Probs: NOOP={probs[0,0]:.3f}, MOVE={probs[0,1]:.3f}, ATTACK={probs[0,17]:.3f}")
+                # Log top 5 actions to see what the bot is considering
+                top5_probs, top5_indices = torch.topk(probs[0], 5)
+                top5_str = ", ".join([f"{self._get_action_name(idx.item())}={prob.item():.3f}" for idx, prob in zip(top5_indices, top5_probs)])
+                logger.info(f"🎯 Action #{self.action_count}: {action.item()} ({action_name}) | Top5: {top5_str}")
 
         return action.item(), log_prob.item(), value.item()
 
@@ -239,6 +241,14 @@ class PPOAgent:
         action_names = {
             0: "NOOP",
             1: "MOVE_FORWARD",
+            2: "MOVE_BACKWARD",
+            3: "MOVE_LEFT",
+            4: "MOVE_RIGHT",
+            5: "JUMP",
+            8: "LOOK_LEFT",
+            9: "LOOK_RIGHT",
+            10: "LOOK_UP",
+            11: "LOOK_DOWN",
             17: "ATTACK/MINE"
         }
         return action_names.get(action_id, f"ACTION_{action_id}")

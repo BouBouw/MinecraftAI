@@ -25,6 +25,19 @@ from bridge.minecraft_bot_bridge import MinecraftEnvironment
 
 logger = get_logger(__name__)
 
+# Map network outputs (0-8) to actual implemented action IDs
+ACTION_MAPPING = {
+    0: 0,   # NOOP
+    1: 1,   # MOVE_FORWARD
+    2: 2,   # MOVE_BACKWARD
+    3: 3,   # MOVE_LEFT
+    4: 4,   # MOVE_RIGHT
+    5: 5,   # JUMP
+    6: 13,  # SELECT_SLOT
+    7: 19,  # PLACE_BLOCK
+    8: 21,  # DIG_FORWARD
+}
+
 
 class RealMinecraftTrainer:
     """
@@ -119,17 +132,32 @@ class RealMinecraftTrainer:
             while not done and steps < total_timesteps:
                 # Get action from agent (returns tuple: action, log_prob, value)
                 action_data = self.agent.select_action(observation)
-                # Handle both tuple (action, log_prob, value) and int (action) returns
                 if isinstance(action_data, tuple):
-                    action_int = action_data[0]
+                    network_action, log_prob, value = action_data
                 else:
-                    action_int = action_data
+                    # Fallback if agent returns just action
+                    network_action = action_data
+                    log_prob = 0.0
+                    value = 0.0
 
-                # Step expects a dict with 'action_type' key
-                action = {'action_type': action_int}
+                # Map network output (0-8) to actual implemented action ID
+                actual_action_id = ACTION_MAPPING[network_action]
+                action = {'action_type': actual_action_id}
+
+                # Execute action
                 observation, reward, done, truncated, info = await self.env.step(action)
 
-                # Store experience
+                # Store experience in rollout buffer
+                self.agent.store_transition(
+                    observation=observation,
+                    action=actual_action_id,
+                    log_prob=log_prob,
+                    reward=reward,
+                    value=value,
+                    done=done or truncated
+                )
+
+                # Also store in short-term memory
                 self.memory.short_term.remember(
                     state=observation,
                     action=action,
@@ -137,14 +165,11 @@ class RealMinecraftTrainer:
                     done=done or truncated
                 )
 
-                # Update agent
-                self.agent.update(
-                    state=observation,
-                    action=action,
-                    reward=reward,
-                    next_state=observation,
-                    done=done or truncated
-                )
+                # Update agent periodically (every 256 steps)
+                if steps % 256 == 0 and steps > 0:
+                    metrics = self.agent.update()
+                    if metrics:
+                        logger.info(f"📊 Policy loss: {metrics.get('policy_loss', 0):.4f}")
 
                 # Track metrics
                 self.current_episode_reward += reward

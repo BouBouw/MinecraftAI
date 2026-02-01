@@ -293,6 +293,17 @@ class MinecraftBotBridge:
 
     def _get_default_observation(self) -> Dict[str, Any]:
         """Return default observation when state is not available"""
+        # Inventory: 36 slots × 2 values [item_id, count]
+        default_inventory = [[0, 0] for _ in range(36)]
+        # Flatten to list of 72 values
+        flat_inventory = [item for slot in default_inventory for item in slot]
+
+        # Visible blocks: 100 blocks × 4 values [x, y, z, block_id]
+        default_blocks = [0] * 400
+
+        # Nearby entities: 10 entities × 4 values [type, x, y, z]
+        default_entities = [0] * 40
+
         return {
             'position': [0, 64, 0],
             'rotation': [0, 0],
@@ -301,10 +312,11 @@ class MinecraftBotBridge:
             'saturation': 20,
             'on_ground': 1,
             'in_water': 0,
-            'inventory': [],
+            'inventory': flat_inventory,
             'held_item': 0,
             'armor': [0, 0, 0, 0],
-            'nearby_entities': [],
+            'visible_blocks': default_blocks,
+            'nearby_entities': default_entities,
             'time_of_day': 0,
             'is_raining': 0,
             'biome_id': 1

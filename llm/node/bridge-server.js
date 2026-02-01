@@ -364,14 +364,17 @@ class MinecraftBridgeServer extends EventEmitter {
      * Get inventory state from bot
      */
     getInventoryState(bot) {
+        // Return flat array: 36 slots × 2 values [item_id, count]
         const inventory = [];
 
         for (let i = 0; i < 36; i++) {
             const item = bot.inventory.slots[i];
             if (item) {
-                inventory.push([item.type || 0, item.count || 0]);
+                inventory.push(item.type || 0);
+                inventory.push(item.count || 0);
             } else {
-                inventory.push([0, 0]);
+                inventory.push(0);
+                inventory.push(0);
             }
         }
 
@@ -382,26 +385,32 @@ class MinecraftBridgeServer extends EventEmitter {
      * Get visible blocks (simplified version)
      */
     getVisibleBlocks(bot) {
-        // This would implement raycasting to find visible blocks
-        // For now, return empty array
-        return [];
+        // Return flat array: 100 blocks × 4 values [x, y, z, block_id]
+        // For now, return zeros (will be filled by raycasting later)
+        const blocks = [];
+        for (let i = 0; i < 100; i++) {
+            blocks.push(0, 0, 0, 0);  // x, y, z, block_id
+        }
+        return blocks;
     }
 
     /**
      * Get nearby entities
      */
     getNearbyEntities(bot) {
-        const entities = [];
+        // Return flat array: 10 entities × 4 values [type, x, y, z]
+        const entities = new Array(40).fill(0);  // Default to zeros
         const nearbyEntities = Object.values(bot.entities);
+        let idx = 0;
 
         for (const entity of nearbyEntities) {
+            if (idx >= 10) break;  // Max 10 entities
             if (entity.position.distanceTo(bot.entity.position) < 10) {
-                entities.push({
-                    type: entity.name || entity.type,
-                    x: entity.position.x,
-                    y: entity.position.y,
-                    z: entity.position.z
-                });
+                entities[idx * 4] = entity.name || entity.type || 0;
+                entities[idx * 4 + 1] = entity.position.x;
+                entities[idx * 4 + 2] = entity.position.y;
+                entities[idx * 4 + 3] = entity.position.z;
+                idx++;
             }
         }
 
@@ -428,12 +437,12 @@ class MinecraftBridgeServer extends EventEmitter {
      * Get armor state
      */
     getArmorState(bot) {
-        return {
-            head: bot.inventory.slots[5]?.type || 0,
-            chest: bot.inventory.slots[6]?.type || 0,
-            legs: bot.inventory.slots[7]?.type || 0,
-            feet: bot.inventory.slots[8]?.type || 0
-        };
+        return [
+            bot.inventory.slots[5]?.type || 0,  // head
+            bot.inventory.slots[6]?.type || 0,  // chest
+            bot.inventory.slots[7]?.type || 0,  // legs
+            bot.inventory.slots[8]?.type || 0   // feet
+        ];
     }
 
     /**
@@ -449,15 +458,15 @@ class MinecraftBridgeServer extends EventEmitter {
             health: 20,
             food: 20,
             saturation: 20,
-            inventory: [],
+            inventory: new Array(72).fill(0),  // 36 slots × 2
             hotbar_selected: 0,
-            visible_blocks: [],
-            nearby_entities: [],
+            visible_blocks: new Array(400).fill(0),  // 100 blocks × 4
+            nearby_entities: new Array(40).fill(0),  // 10 entities × 4
             time_of_day: 0,
             is_raining: 0,
             biome_id: 1,
             held_item: 0,
-            armor: { head: 0, chest: 0, legs: 0, feet: 0 }
+            armor: [0, 0, 0, 0]  // [head, chest, legs, feet]
         };
     }
 

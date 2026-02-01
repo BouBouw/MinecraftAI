@@ -17,7 +17,7 @@ def fix_imports_in_file(file_path):
     changes = []
 
     # Replace relative imports with absolute imports
-    # from ..utils.config -> from llm.python.utils.config
+    # from utils.config -> from llm.python.utils.config
     content = re.sub(r'from \.\.utils\.([^ ]+)', r'from llm.python.utils.\1', content)
     content = re.sub(r'from \.\.gym_env\.([^ ]+)', r'from llm.python.gym_env.\1', content)
     content = re.sub(r'from \.\.agents\.([^ ]+)', r'from llm.python.agents.\1', content)

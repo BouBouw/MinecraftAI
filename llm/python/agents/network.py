@@ -9,8 +9,8 @@ import torch.nn.functional as F
 from typing import Dict, Any, Tuple, List
 import numpy as np
 
-from ..utils.config import get_config
-from ..utils.logger import get_logger
+from utils.config import get_config
+from utils.logger import get_logger
 
 logger = get_logger(__name__)
 
@@ -207,7 +207,7 @@ class ActorNetwork(nn.Module):
         self.actor = nn.Sequential(
             nn.Linear(hidden_size, hidden_size),
             nn.ReLU(),
-            nn.Linear(hidden_size, 50)  # 50 action types
+            nn.Linear(hidden_size, 9)  # 9 action types (0-5,13,19,21)
         )
 
         # Initialize weights

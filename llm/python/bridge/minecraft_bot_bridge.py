@@ -191,7 +191,7 @@ class MinecraftBotBridge:
             return {'success': False}
 
         message = {
-            'type': 'execute_action',
+            'type': 'action',
             'action': {
                 'action_type': action_type,
                 **params
@@ -235,8 +235,8 @@ class MinecraftBotBridge:
             logger.error("Not connected to bot")
             return {}
 
-        # Request observation
-        await self.ws.send(json.dumps({'type': 'get_observation'}))
+        # Don't request observation - bridge sends it automatically
+        # await self.ws.send(json.dumps({'type': 'get_observation'}))
 
         # Wait for observation (with timeout)
         # Will be handled by _handle_observation
@@ -274,7 +274,7 @@ class MinecraftBotBridge:
             return {}
 
         # Send reset command
-        await self.ws.send(json.dumps({'type': 'reset_environment'}))
+        await self.ws.send(json.dumps({'type': 'reset'}))
 
         # Wait for reset to complete
         await asyncio.sleep(2)

@@ -10,13 +10,13 @@ from pathlib import Path
 import time
 from datetime import datetime
 
-from ..agents.ppo_agent import PPOAgent, create_ppo_agent
-from ..memory.memory_manager import MemoryManager, get_database_manager
-from ..crafting.craft_discovery import CraftDiscoverySystem
-from ..training.curriculum import Curriculum, RewardShaper, create_curriculum
-from ..gym_env.minecraft_env import MinecraftEnv, create_minecraft_env
-from ..utils.config import get_config
-from ..utils.logger import get_logger, log_episode_start, log_episode_end
+from agents.ppo_agent import PPOAgent, create_ppo_agent
+from memory.memory_manager import MemoryManager, get_database_manager
+from crafting.craft_discovery import CraftDiscoverySystem
+from training.curriculum import Curriculum, RewardShaper, create_curriculum
+from gym_env.minecraft_env import MinecraftEnv, create_minecraft_env
+from utils.config import get_config
+from utils.logger import get_logger, log_episode_start, log_episode_end
 
 logger = get_logger(__name__)
 
@@ -417,7 +417,7 @@ def train_minecraft_agent(
     """
     # Load config
     if config_path:
-        from ..utils.config import Config
+        from utils.config import Config
         config_obj = Config(config_path)
         config = config_obj.config
     else:

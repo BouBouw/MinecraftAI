@@ -11,8 +11,8 @@ from .short_term import ShortTermMemory
 from .long_term import LongTermMemory
 from .episodic import EpisodicMemory
 from .semantic import SemanticMemory
-from ..utils.config import get_config
-from ..utils.logger import get_logger
+from utils.config import get_config
+from utils.logger import get_logger
 
 logger = get_logger(__name__)
 

@@ -119,9 +119,14 @@ class RealMinecraftTrainer:
             while not done and steps < total_timesteps:
                 # Get action from agent (returns tuple: action, log_prob, value)
                 action_data = self.agent.select_action(observation)
-                action = action_data[0] if isinstance(action_data, tuple) else action_data
+                # Handle both tuple (action, log_prob, value) and int (action) returns
+                if isinstance(action_data, tuple):
+                    action_int = action_data[0]
+                else:
+                    action_int = action_data
 
-                # Execute action in real Minecraft
+                # Step expects a dict with 'action_type' key
+                action = {'action_type': action_int}
                 observation, reward, done, truncated, info = await self.env.step(action)
 
                 # Store experience

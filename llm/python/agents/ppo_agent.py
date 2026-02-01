@@ -14,9 +14,9 @@ from collections import deque
 from pathlib import Path
 
 from .network import PPOModel, create_ppo_model
-from ..memory.memory_manager import MemoryManager
-from ..utils.config import get_config
-from ..utils.logger import get_logger
+from memory.memory_manager import MemoryManager
+from utils.config import get_config
+from utils.logger import get_logger
 
 logger = get_logger(__name__)
 

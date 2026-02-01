@@ -10,9 +10,9 @@ from dataclasses import dataclass
 from datetime import datetime
 import json
 
-from ..memory.database import DatabaseManager, get_database_manager
-from ..utils.config import get_config
-from ..utils.logger import get_logger
+from memory.database import DatabaseManager, get_database_manager
+from utils.config import get_config
+from utils.logger import get_logger
 
 logger = get_logger(__name__)
 

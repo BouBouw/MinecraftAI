@@ -8,8 +8,8 @@ from collections import deque
 from typing import Dict, Any, List, Tuple, Optional
 from dataclasses import dataclass
 
-from ..utils.config import get_config
-from ..utils.logger import get_logger
+from utils.config import get_config
+from utils.logger import get_logger
 
 logger = get_logger(__name__)
 

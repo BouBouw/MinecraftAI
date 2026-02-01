@@ -266,13 +266,15 @@ def log_episode_end(logger: logging.Logger, episode_id: int, info: Dict[str, Any
 
         blocks_placed = reward_stats.get('blocks_placed', 0)
         discovered_blocks = reward_stats.get('discovered_blocks', 0)
+        distance_traveled = reward_stats.get('distance_traveled', 0)
 
         logger.info(
             f"   📈 Accomplishments: "
             f"Mined: {total_blocks} blocks, "
             f"Crafted: {total_items} items, "
             f"Placed: {blocks_placed} blocks, "
-            f"Discovered: {discovered_blocks} new types"
+            f"Discovered: {discovered_blocks} new types, "
+            f"Distance: {distance_traveled:.1f} blocks"
         )
 
     # Log to structured format for analysis

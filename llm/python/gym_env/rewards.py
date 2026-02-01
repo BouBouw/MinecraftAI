@@ -41,11 +41,17 @@ class RewardSystem:
         self.episode_crafted_items = defaultdict(int)
         self.episode_placed_blocks = 0
 
+        # Movement tracking - encourage exploration
+        self.last_position = None
+        self.total_distance = 0.0
+
     def reset(self):
         """Reset episode-specific tracking"""
         self.episode_mined_blocks.clear()
         self.episode_crafted_items.clear()
         self.episode_placed_blocks = 0
+        self.last_position = None
+        self.total_distance = 0.0
 
     def calculate_reward(
         self,
@@ -179,7 +185,7 @@ class RewardSystem:
         """Calculate exploration-based rewards"""
         reward = 0.0
 
-        # New chunk exploration
+        # Distance reward - encourage movement!
         pos = next_state.get('position', [0, 64, 0])
         # Handle both list format [x, y, z] and dict format {x:, y:, z:}
         if isinstance(pos, list):
@@ -187,6 +193,19 @@ class RewardSystem:
         else:
             x, y, z = pos.get('x', 0), pos.get('y', 64), pos.get('z', 0)
 
+        # Calculate distance from last position
+        if self.last_position is not None:
+            last_x, last_y, last_z = self.last_position
+            distance = ((x - last_x)**2 + (z - last_z)**2)**0.5  # Only X-Z distance
+
+            # Reward for movement (0.1 per block traveled)
+            reward += distance * 0.1
+
+            self.total_distance += distance
+
+        self.last_position = (x, y, z)
+
+        # New chunk exploration
         chunk_x = int(x // 16)
         chunk_z = int(z // 16)
         chunk_key = (chunk_x, chunk_z)
@@ -302,6 +321,7 @@ class RewardSystem:
             'blocks_mined': dict(self.episode_mined_blocks),
             'items_crafted': dict(self.episode_crafted_items),
             'blocks_placed': self.episode_placed_blocks,
+            'distance_traveled': self.total_distance,
         }
 
 

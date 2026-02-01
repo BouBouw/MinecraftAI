@@ -395,7 +395,10 @@ def create_trainer(
     Returns:
         Trainer instance
     """
-    config = config or get_config()
+    # Ensure we have a plain dict, not a Config object
+    if config is None:
+        config_obj = get_config()
+        config = config_obj.config if hasattr(config_obj, 'config') else config_obj
 
     # Create environment
     env = create_minecraft_env(config)

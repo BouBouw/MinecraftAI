@@ -36,6 +36,11 @@ class MinecraftEnv(gym.Env):
             config: Configuration dictionary
             bridge_client: Client for communicating with Node.js bridge
         """
+        from utils.logger import get_logger
+        logger = get_logger(__name__)
+        logger.info(f"MinecraftEnv.__init__ called with config type: {type(config)}")
+        logger.info(f"config has observation_space: {'observation_space' in config if hasattr(config, '__contains__') else 'N/A (not dict-like)'}")
+
         super().__init__()
 
         self.config = config

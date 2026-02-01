@@ -30,55 +30,25 @@ class ObservationSpace:
         Args:
             config: Configuration dictionary (plain dict or Config object)
         """
-        from utils.logger import get_logger
-        logger = get_logger(__name__)
-
         self.config = config
-
-        # Print statements for guaranteed visibility
-        print(f"[OBS_INIT] config type: {type(config)}")
 
         # Handle both Config objects and plain dicts
         # Check if config is a Config object (has 'config' attribute)
         if hasattr(config, 'config') and hasattr(config, 'get'):
             # This is a Config object - extract the raw dict
             raw_config = config.config
-            print("[OBS_INIT] Detected Config object, extracting raw config dict")
-            logger.info("Detected Config object, extracting raw config dict")
         elif isinstance(config, dict):
             # This is already a plain dict
             raw_config = config
-            print(f"[OBS_INIT] Detected plain dict with keys: {list(config.keys())[:10]}")
-            logger.info("Detected plain dict")
         else:
             # Unknown type - try to use it as-is
             raw_config = config
-            print(f"[OBS_INIT] Unknown config type: {type(config)}")
-            logger.warning(f"Unknown config type: {type(config)}")
 
         # Now extract observation_space section using plain dict access
         self.obs_config = raw_config.get('observation_space', {}) if isinstance(raw_config, dict) else {}
 
-        # Debug logging
-        print(f"[OBS_INIT] obs_config type: {type(self.obs_config)}")
-        print(f"[OBS_INIT] obs_config has {len(self.obs_config)} keys")
-        if self.obs_config:
-            print(f"[OBS_INIT] obs_config keys: {list(self.obs_config.keys())}")
-            print(f"[OBS_INIT] obs_config['position'] = {self.obs_config.get('position', 'NOT_FOUND')}")
-        else:
-            print("[OBS_INIT] WARNING: obs_config is empty!")
-            if isinstance(raw_config, dict):
-                print(f"[OBS_INIT] raw_config keys: {list(raw_config.keys())}")
-                print(f"[OBS_INIT] 'observation_space' in raw_config: {'observation_space' in raw_config}")
-
-        logger.info(f"obs_config type: {type(self.obs_config)}")
-        logger.info(f"obs_config has {len(self.obs_config)} keys: {list(self.obs_config.keys())}")
-
         # Build observation space
         self.space = self._build_observation_space()
-        print(f"[OBS_INIT] Built observation space with {len(self.space.spaces)} fields")
-        print(f"[OBS_INIT] Observation space keys: {list(self.space.spaces.keys())}")
-        logger.info(f"Built observation space with {len(self.space.spaces)} fields: {list(self.space.spaces.keys())}")
 
     def _build_observation_space(self) -> spaces.Dict:
         """
@@ -89,18 +59,11 @@ class ObservationSpace:
         """
         space_dict = {}
 
-        # Debug: Check what .get() returns for first few fields
-        pos_val = self.obs_config.get('position', True)
-        rot_val = self.obs_config.get('rotation', True)
-        print(f"[BUILD_OBS] position.get() = {pos_val} (type: {type(pos_val)})")
-        print(f"[BUILD_OBS] rotation.get() = {rot_val} (type: {type(rot_val)})")
-
         # Position and movement
         if self.obs_config.get('position', True):
             space_dict['position'] = spaces.Box(
                 low=-100000, high=100000, shape=(3,), dtype=np.float32
             )
-            print("[BUILD_OBS] Added position field")
 
         if self.obs_config.get('rotation', True):
             space_dict['rotation'] = spaces.Box(
@@ -173,7 +136,6 @@ class ObservationSpace:
                 low=0, high=1000, shape=(4,), dtype=np.int32  # head, chest, legs, feet
             )
 
-        print(f"[BUILD_OBS] Final space_dict has {len(space_dict)} fields: {list(space_dict.keys())}")
         return spaces.Dict(space_dict)
 
     def create_observation(self, raw_state: Dict[str, Any]) -> Dict[str, Any]:
@@ -191,32 +153,23 @@ class ObservationSpace:
 
         obs = {}
 
-        # Debug: Check what self.space actually is
-        logger.info(f"create_observation: self.space type = {type(self.space)}")
-        logger.info(f"create_observation: 'position' in self.space = {'position' in self.space}")
-        if hasattr(self.space, 'spaces'):
-            logger.info(f"create_observation: self.space.spaces type = {type(self.space.spaces)}")
-            logger.info(f"create_observation: 'position' in self.space.spaces = {'position' in self.space.spaces}")
-            logger.info(f"create_observation: self.space.spaces keys = {list(self.space.spaces.keys())}")
-
         # Position and movement
-        if 'position' in self.space:
+        if 'position' in self.space.spaces:
             pos = raw_state.get('position', {})
             obs['position'] = np.array([
                 pos.get('x', 0),
                 pos.get('y', 0),
                 pos.get('z', 0)
             ], dtype=np.float32)
-            logger.info("create_observation: Added position field")
 
-        if 'rotation' in self.space:
+        if 'rotation' in self.space.spaces:
             rot = raw_state.get('rotation', {})
             obs['rotation'] = np.array([
                 rot.get('yaw', 0),
                 rot.get('pitch', 0)
             ], dtype=np.float32)
 
-        if 'velocity' in self.space:
+        if 'velocity' in self.space.spaces:
             vel = raw_state.get('velocity', {})
             obs['velocity'] = np.array([
                 vel.get('dx', 0),
@@ -224,24 +177,24 @@ class ObservationSpace:
                 vel.get('dz', 0)
             ], dtype=np.float32)
 
-        if 'on_ground' in self.space:
+        if 'on_ground' in self.space.spaces:
             obs['on_ground'] = int(raw_state.get('on_ground', False))
 
-        if 'in_water' in self.space:
+        if 'in_water' in self.space.spaces:
             obs['in_water'] = int(raw_state.get('in_water', False))
 
         # Player state
-        if 'health' in self.space:
+        if 'health' in self.space.spaces:
             obs['health'] = np.array([raw_state.get('health', 20)], dtype=np.float32)
 
-        if 'food' in self.space:
+        if 'food' in self.space.spaces:
             obs['food'] = np.array([raw_state.get('food', 20)], dtype=np.float32)
 
-        if 'saturation' in self.space:
+        if 'saturation' in self.space.spaces:
             obs['saturation'] = np.array([raw_state.get('saturation', 20)], dtype=np.float32)
 
         # Inventory
-        if 'inventory' in self.space:
+        if 'inventory' in self.space.spaces:
             inventory = raw_state.get('inventory', [])
             inv_array = np.zeros((36, 2), dtype=np.int32)
 
@@ -251,15 +204,16 @@ class ObservationSpace:
 
             obs['inventory'] = inv_array
 
-        if 'hotbar_selected' in self.space:
+        if 'hotbar_selected' in self.space.spaces:
             obs['hotbar_selected'] = raw_state.get('hotbar_selected', 0)
 
         # Vision
-        if 'visible_blocks' in self.space:
+        if 'visible_blocks' in self.space.spaces:
             blocks = raw_state.get('visible_blocks', [])
-            blocks_array = np.zeros((100, 4), dtype=np.int32)
+            count = self.obs_config.get('visible_blocks_count', 100)
+            blocks_array = np.zeros((count, 4), dtype=np.int32)
 
-            for i, block in enumerate(blocks[:100]):
+            for i, block in enumerate(blocks[:count]):
                 blocks_array[i] = [
                     block.get('x', 0),
                     block.get('y', 0),
@@ -270,11 +224,12 @@ class ObservationSpace:
             obs['visible_blocks'] = blocks_array
 
         # Entities
-        if 'nearby_entities' in self.space:
+        if 'nearby_entities' in self.space.spaces:
             entities = raw_state.get('nearby_entities', [])
-            entities_array = np.zeros((10, 4), dtype=np.int32)
+            count = self.obs_config.get('nearby_entities_count', 10)
+            entities_array = np.zeros((count, 4), dtype=np.int32)
 
-            for i, entity in enumerate(entities[:10]):
+            for i, entity in enumerate(entities[:count]):
                 entities_array[i] = [
                     entity.get('type', 0),
                     entity.get('x', 0),
@@ -285,20 +240,20 @@ class ObservationSpace:
             obs['nearby_entities'] = entities_array
 
         # Environment
-        if 'time_of_day' in self.space:
+        if 'time_of_day' in self.space.spaces:
             obs['time_of_day'] = np.array([raw_state.get('time_of_day', 0)], dtype=np.int32)
 
-        if 'is_raining' in self.space:
+        if 'is_raining' in self.space.spaces:
             obs['is_raining'] = int(raw_state.get('is_raining', False))
 
-        if 'biome_id' in self.space:
+        if 'biome_id' in self.space.spaces:
             obs['biome_id'] = raw_state.get('biome_id', 0)
 
         # Equipment
-        if 'held_item' in self.space:
+        if 'held_item' in self.space.spaces:
             obs['held_item'] = raw_state.get('held_item', 0)
 
-        if 'armor' in self.space:
+        if 'armor' in self.space.spaces:
             armor = raw_state.get('armor', {})
             obs['armor'] = np.array([
                 armor.get('head', 0),
@@ -308,8 +263,6 @@ class ObservationSpace:
             ], dtype=np.int32)
 
         # Debug logging
-        from utils.logger import get_logger
-        logger = get_logger(__name__)
         logger.info(f"Created observation with {len(obs)} fields: {list(obs.keys())}")
 
         return obs

@@ -340,31 +340,20 @@ class MinecraftBridgeServer extends EventEmitter {
         const bot = this.botClient.mineflayerBot;
 
         return {
-            position: {
-                x: bot.entity.position.x,
-                y: bot.entity.position.y,
-                z: bot.entity.position.z
-            },
-            rotation: {
-                yaw: bot.entity.yaw,
-                pitch: bot.entity.pitch
-            },
-            velocity: {
-                dx: bot.entity.velocity.x,
-                dy: bot.entity.velocity.y,
-                dz: bot.entity.velocity.z
-            },
-            on_ground: bot.entity.onGround,
-            in_water: bot.entity.isInWater,
-            health: bot.health,
-            food: bot.food,
-            saturation: bot.saturation,
+            position: [bot.entity.position.x, bot.entity.position.y, bot.entity.position.z],
+            rotation: [bot.entity.yaw, bot.entity.pitch],
+            velocity: [bot.entity.velocity.x, bot.entity.velocity.y, bot.entity.velocity.z],
+            on_ground: bot.entity.onGround ? 1 : 0,
+            in_water: bot.entity.isInWater ? 1 : 0,
+            health: bot.health || 20,
+            food: bot.food || 20,
+            saturation: bot.saturation || 20,
             inventory: this.getInventoryState(bot),
-            hotbar_selected: bot.quickBarSlot,
+            hotbar_selected: bot.quickBarSlot || 0,
             visible_blocks: this.getVisibleBlocks(bot),
             nearby_entities: this.getNearbyEntities(bot),
-            time_of_day: bot.time.timeOfDay,
-            is_raining: bot.isRaining,
+            time_of_day: bot.time ? bot.time.timeOfDay || 0 : 0,
+            is_raining: bot.isRaining ? 1 : 0,
             biome_id: this.getBiomeId(bot),
             held_item: this.getHeldItem(bot),
             armor: this.getArmorState(bot)
@@ -380,12 +369,9 @@ class MinecraftBridgeServer extends EventEmitter {
         for (let i = 0; i < 36; i++) {
             const item = bot.inventory.slots[i];
             if (item) {
-                inventory.push({
-                    item_id: item.type,
-                    count: item.count
-                });
+                inventory.push([item.type || 0, item.count || 0]);
             } else {
-                inventory.push(null);
+                inventory.push([0, 0]);
             }
         }
 
@@ -455,11 +441,11 @@ class MinecraftBridgeServer extends EventEmitter {
      */
     getDefaultState() {
         return {
-            position: { x: 0, y: 64, z: 0 },
-            rotation: { yaw: 0, pitch: 0 },
-            velocity: { dx: 0, dy: 0, dz: 0 },
-            on_ground: true,
-            in_water: false,
+            position: [0, 64, 0],
+            rotation: [0, 0],
+            velocity: [0, 0, 0],
+            on_ground: 1,
+            in_water: 0,
             health: 20,
             food: 20,
             saturation: 20,
@@ -468,7 +454,7 @@ class MinecraftBridgeServer extends EventEmitter {
             visible_blocks: [],
             nearby_entities: [],
             time_of_day: 0,
-            is_raining: false,
+            is_raining: 0,
             biome_id: 1,
             held_item: 0,
             armor: { head: 0, chest: 0, legs: 0, feet: 0 }

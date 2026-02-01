@@ -83,9 +83,12 @@ class MinecraftBotBridge:
         try:
             logger.info(f"🔌 Connecting to WebSocket server at {self.host}:{self.port}...")
 
-            self.ws = await websockets.serve(
+            # Connect as client to the Node.js WebSocket server
+            self.ws = await websockets.connect(
                 f"ws://{self.host}:{self.port}",
-                ping_interval=30
+                ping_interval=30,
+                ping_timeout=20,
+                close_timeout=10
             )
 
             logger.info("✅ Connected to Minecraft bot via WebSocket")

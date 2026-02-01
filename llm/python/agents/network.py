@@ -209,11 +209,11 @@ class ActorNetwork(nn.Module):
         # Encoder
         self.encoder = MinecraftEncoder(config)
 
-        # Actor head
+        # Actor head - output 50 actions for all possible action types
         self.actor = nn.Sequential(
             nn.Linear(hidden_size, hidden_size),
             nn.ReLU(),
-            nn.Linear(hidden_size, 9)  # 9 action types (0-5,13,19,21)
+            nn.Linear(hidden_size, 50)  # 50 action types (0-49)
         )
 
         # Initialize weights
@@ -382,7 +382,8 @@ class PPOModel(nn.Module):
     def evaluate_actions(
         self,
         observations: Dict[str, torch.Tensor],
-        actions: torch.Tensor
+        actions: torch.Tensor,
+        available_actions: List[int] = None
     ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """
         Evaluate actions for PPO update
@@ -390,12 +391,20 @@ class PPOModel(nn.Module):
         Args:
             observations: Dictionary of observation tensors
             actions: Actions taken
+            available_actions: List of available action IDs (for masking)
 
         Returns:
             Tuple of (log_probs, values, entropy)
         """
         logits = self.actor(observations)
         values = self.critic(observations)
+
+        # Mask unavailable actions if provided
+        if available_actions is not None and len(available_actions) < 50:
+            mask = torch.full_like(logits, float('-inf'))
+            for action_id in available_actions:
+                mask[:, action_id] = 0  # Unmask available actions
+            logits = logits + mask
 
         # Calculate log probabilities
         log_probs = F.log_softmax(logits, dim=-1)

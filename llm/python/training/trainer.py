@@ -420,8 +420,8 @@ def create_trainer(
     # Create environment with bridge AND curriculum
     env = create_minecraft_env(config, curriculum=curriculum, bridge_client=bridge)
 
-    # Create agent
-    agent = create_ppo_agent(config=config)
+    # Create agent WITH curriculum for action masking
+    agent = create_ppo_agent(config=config, curriculum=curriculum)
 
     # Create trainer with all components
     return Trainer(

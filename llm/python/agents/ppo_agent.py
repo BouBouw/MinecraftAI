@@ -141,7 +141,8 @@ class PPOAgent:
         self,
         config: Dict[str, Any],
         memory_manager: MemoryManager = None,
-        device: str = 'cpu'
+        device: str = 'cpu',
+        curriculum = None
     ):
         """
         Initialize PPO agent
@@ -150,10 +151,12 @@ class PPOAgent:
             config: Configuration dictionary
             memory_manager: Memory manager instance
             device: Device to run on (cpu or cuda)
+            curriculum: Curriculum object for action masking
         """
         self.config = config
         self.memory = memory_manager
         self.device = torch.device(device)
+        self.curriculum = curriculum  # Store curriculum for action masking
 
         # PPO hyperparameters
         agent_config = config.get('agent', {})
@@ -201,8 +204,15 @@ class PPOAgent:
         # Convert observation to tensors
         obs_tensors = self._observation_to_tensors(observation)
 
+        # Get available actions from curriculum
+        available_actions = self._get_available_actions()
+
         with torch.no_grad():
             logits = self.model.actor(obs_tensors)
+
+            # Mask unavailable actions
+            logits = self._mask_actions(logits, available_actions)
+
             probs = F.softmax(logits, dim=-1)
             dist = Categorical(probs)
             action = dist.sample()
@@ -237,6 +247,38 @@ class PPOAgent:
                 tensors[key] = torch.FloatTensor(flat_value).unsqueeze(0).to(self.device)
 
         return tensors
+
+    def _get_available_actions(self) -> List[int]:
+        """
+        Get available actions from curriculum
+
+        Returns:
+            List of available action IDs
+        """
+        if self.curriculum:
+            return self.curriculum.get_available_actions()
+        # If no curriculum, all actions available
+        return list(range(50))
+
+    def _mask_actions(self, logits: torch.Tensor, available_actions: List[int]) -> torch.Tensor:
+        """
+        Mask unavailable actions by setting their logits to -infinity
+
+        Args:
+            logits: Action logits tensor [1, 50]
+            available_actions: List of available action IDs
+
+        Returns:
+            Masked logits tensor
+        """
+        # Create mask tensor
+        mask = torch.full_like(logits, float('-inf'))
+        for action_id in available_actions:
+            mask[0, action_id] = 0  # Unmask available actions
+
+        # Apply mask
+        masked_logits = logits + mask
+        return masked_logits
 
     def update(self) -> Dict[str, float]:
         """
@@ -373,7 +415,9 @@ class PPOAgent:
                         continue
 
                 # logger.info(f"Calling evaluate_actions with batch_actions shape: {batch_actions.shape}")
-                log_probs, values, entropy = self.model.evaluate_actions(stacked_obs, batch_actions)
+                # Get available actions for masking during training
+                available_actions = self._get_available_actions()
+                log_probs, values, entropy = self.model.evaluate_actions(stacked_obs, batch_actions, available_actions)
                 # logger.info(f"evaluate_actions returned log_probs shape: {log_probs.shape}")
 
                 # Calculate ratio
@@ -504,7 +548,8 @@ class PPOAgent:
 def create_ppo_agent(
     config: Dict[str, Any],
     memory_manager: MemoryManager = None,
-    device: str = 'cpu'
+    device: str = 'cpu',
+    curriculum = None
 ) -> PPOAgent:
     """
     Factory function to create PPO agent
@@ -513,8 +558,9 @@ def create_ppo_agent(
         config: Configuration dictionary
         memory_manager: Memory manager instance
         device: Device to run on
+        curriculum: Curriculum object for action masking
 
     Returns:
         PPOAgent instance
     """
-    return PPOAgent(config, memory_manager, device)
+    return PPOAgent(config, memory_manager, device, curriculum)

@@ -183,6 +183,10 @@ class RewardSystem:
         elif action_type == 31:  # EAT
             reward += 2.0  # Eating is good
 
+        # Look actions - SMALL penalty to discourage spamming
+        elif action_type in [8, 9, 10, 11]:  # LOOK_LEFT, RIGHT, UP, DOWN
+            reward -= 0.5  # Small penalty for excessive looking
+
         return reward
 
     def _exploration_reward(

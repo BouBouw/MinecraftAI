@@ -119,54 +119,54 @@ async function executeAction(action) {
             break;
         case 1: // MOVE_FORWARD
             bot.setControlState('forward', true);
-            await new Promise(resolve => setTimeout(resolve, 100));
+            await new Promise(resolve => setTimeout(resolve, 50));  // 100ms → 50ms (plus rapide)
             bot.setControlState('forward', false);
             break;
         case 2: // MOVE_BACKWARD
             bot.setControlState('back', true);
-            await new Promise(resolve => setTimeout(resolve, 100));
+            await new Promise(resolve => setTimeout(resolve, 50));
             bot.setControlState('back', false);
             break;
         case 3: // MOVE_LEFT (strafe)
             bot.setControlState('left', true);
-            await new Promise(resolve => setTimeout(resolve, 100));
+            await new Promise(resolve => setTimeout(resolve, 50));
             bot.setControlState('left', false);
             break;
         case 4: // MOVE_RIGHT (strafe)
             bot.setControlState('right', true);
-            await new Promise(resolve => setTimeout(resolve, 100));
+            await new Promise(resolve => setTimeout(resolve, 50));
             bot.setControlState('right', false);
             break;
         case 5: // JUMP
             bot.setControlState('jump', true);
-            await new Promise(resolve => setTimeout(resolve, 100));
+            await new Promise(resolve => setTimeout(resolve, 50));
             bot.setControlState('jump', false);
             break;
         case 6: // SNEAK
             bot.setControlState('sneak', true);
-            await new Promise(resolve => setTimeout(resolve, 100));
+            await new Promise(resolve => setTimeout(resolve, 50));
             bot.setControlState('sneak', false);
             break;
         case 7: // SPRINT
             bot.setControlState('sprint', true);
-            await new Promise(resolve => setTimeout(resolve, 100));
+            await new Promise(resolve => setTimeout(resolve, 50));
             bot.setControlState('sprint', false);
             break;
         case 8: // LOOK_LEFT
             bot.look(bot.entity.yaw + 0.2, bot.entity.pitch);
-            await new Promise(resolve => setTimeout(resolve, 100));
+            await new Promise(resolve => setTimeout(resolve, 50));  // 100ms → 50ms (plus fluide)
             break;
         case 9: // LOOK_RIGHT
             bot.look(bot.entity.yaw - 0.2, bot.entity.pitch);
-            await new Promise(resolve => setTimeout(resolve, 100));
+            await new Promise(resolve => setTimeout(resolve, 50));
             break;
         case 10: // LOOK_UP
             bot.look(bot.entity.yaw, bot.entity.pitch + 0.2);
-            await new Promise(resolve => setTimeout(resolve, 100));
+            await new Promise(resolve => setTimeout(resolve, 50));
             break;
         case 11: // LOOK_DOWN
             bot.look(bot.entity.yaw, bot.entity.pitch - 0.2);
-            await new Promise(resolve => setTimeout(resolve, 100));
+            await new Promise(resolve => setTimeout(resolve, 50));
             break;
         case 12: // ATTACK (mine blocks) - Legacy action ID
         case 17: // ATTACK (mine blocks) - New action ID from Python
@@ -191,9 +191,8 @@ async function executeAction(action) {
 
                     // Log what we're mining for debugging
                     const blockName = targetBlock.name || 'unknown';
-                    const blockHardness = targetBlock.hardness || 'unknown';
 
-                    console.log(`⛏️ Mining ${blockName} (hardness: ${blockHardness}) at ${targetBlock.position}`);
+                    console.log(`⛏️ Mining ${blockName} at ${targetBlock.position}`);
 
                     // Smart tool selection: use best tool available
                     const bestTool = bot.inventory.items().find(item =>
@@ -207,13 +206,49 @@ async function executeAction(action) {
                         await bot.equip(bestTool, 'hand');
                     }
 
-                    // Add timeout to prevent infinite mining on unbreakable blocks
-                    // Different blocks have different mining times:
-                    // - Dirt: 0.75s (by hand)
-                    // - Stone: 1.5s (by hand)
-                    // - Iron ore: 3s+ (by hand)
-                    // - Obsidian: IMPOSSIBLE (needs diamond pickaxe)
-                    const digTimeout = 5000; // 5 second max
+                    // Calculate exact mining time based on block and tool
+                    // Source: https://minecraft.wiki/w/Breaking
+                    const blockHardness = targetBlock.hardness || 1;  // Default to 1 if unknown
+                    const canHarvest = targetBlock.canHarvest || false;
+
+                    // Tool speed multiplier
+                    let toolSpeed = 1;  // By hand (default)
+                    if (bestTool) {
+                        // Tool material speed multipliers
+                        if (bestTool.name.includes('wooden')) toolSpeed = 2;
+                        else if (bestTool.name.includes('stone')) toolSpeed = 4;
+                        else if (bestTool.name.includes('iron')) toolSpeed = 6;
+                        else if (bestTool.name.includes('diamond')) toolSpeed = 8;
+                        else if (bestTool.name.includes('golden')) toolSpeed = 12;
+                    }
+
+                    // Check for Efficiency enchantment (mineflayer uses .enchants property)
+                    let efficiencyBonus = 0;
+                    if (bestTool && bestTool.enchants) {
+                        const efficiencyEnchant = bestTool.enchants.find(e => e.name === 'efficiency');
+                        if (efficiencyEnchant) {
+                            efficiencyBonus = efficiencyEnchant.lvl * 3;  // mineflayer uses .lvl
+                        }
+                    }
+
+                    // Mining speed formula (simplified from Minecraft)
+                    // time = hardness / (toolSpeed * (1 + efficiencyBonus * 0.03)) * (correctTool ? 1 : 3) * (canHarvest ? 1 : 10)
+                    const isCorrectTool = bot.canHarvestBlock(targetBlock);
+                    const toolMultiplier = isCorrectTool ? 1 : 3;
+                    const harvestMultiplier = canHarvest ? 1 : 10;
+
+                    let miningTime = (blockHardness * toolMultiplier * harvestMultiplier) / (toolSpeed * (1 + efficiencyBonus * 0.03));
+
+                    // Add base delay (about 0.25s for arm swing animation)
+                    miningTime += 0.25;
+
+                    // Clamp to reasonable limits (min 0.5s, max 30s for obsidian with wrong tool)
+                    miningTime = Math.max(0.5, Math.min(30, miningTime));
+
+                    // Add 50% margin for network lag and variability
+                    const digTimeout = Math.ceil(miningTime * 1000 * 1.5);  // Convert to ms, add 50% margin
+
+                    console.log(`⏱️  Mining ${blockName}: hardness=${blockHardness}, tool=${bestTool?.name || 'hand'}, speed=${toolSpeed}, efficiency=${efficiencyBonus}, time=${miningTime.toFixed(2)}s, timeout=${digTimeout}ms`);
 
                     const digPromise = bot.dig(targetBlock);
                     const timeoutPromise = new Promise((_, reject) =>
@@ -245,11 +280,8 @@ async function executeAction(action) {
             console.log(`Unknown action type: ${actionType}`);
     }
 
-    // Wait for action to complete (only for non-mining actions)
-    // Mining actions (12, 17) already wait via bot.dig()
-    if (actionType !== 12 && actionType !== 17) {
-        await new Promise(resolve => setTimeout(resolve, 100));
-    }
+    // NOTE: No additional delay here - each action already has its own delay (50ms)
+    // This makes actions more fluid/tac-au-tac
 }
 
 function startObservationLoop() {

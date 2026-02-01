@@ -70,6 +70,7 @@ class Trainer:
         self.total_steps = 0
         self.total_episodes = 0
         self.best_mean_reward = float('-inf')
+        self.current_episode_id = None
 
         # Checkpointing
         self.checkpoint_dir = Path(self.config.get('checkpointing.save_dir', './data/models'))
@@ -175,13 +176,13 @@ class Trainer:
 
         # Start tracking in memory
         if self.memory:
-            episode_id = self.memory.create_episode(
+            self.current_episode_id = self.memory.create_episode(
                 self.curriculum.current_stage_idx
             )
         else:
-            episode_id = None
+            self.current_episode_id = None
 
-        log_episode_start(logger, episode_id or episode_num, info)
+        log_episode_start(logger, self.current_episode_id or episode_num, info)
 
         done = False
         truncated = False
@@ -227,12 +228,17 @@ class Trainer:
                     self._log_tensorboard(update_stats)
 
         # End episode
-        if self.memory:
+        if self.memory and hasattr(self.memory, 'current_episode_id'):
             death_cause = info.get('death_cause') if done else None
-            self.memory.end_episode(
+            # Convert inventory numpy array to list for JSON serialization
+            final_inv = obs.get('inventory')
+            final_inventory = final_inv.tolist() if hasattr(final_inv, 'tolist') else final_inv
+
+            self.memory.update_episode(
+                episode_id=self.current_episode_id,
                 total_reward=episode_reward,
                 death_cause=death_cause,
-                final_inventory=obs.get('inventory')
+                final_inventory=final_inventory
             )
 
         stats = {
@@ -242,7 +248,7 @@ class Trainer:
             'curriculum_stage': self.curriculum.current_stage_idx,
         }
 
-        log_episode_end(logger, episode_id or episode_num, stats)
+        log_episode_end(logger, self.current_episode_id or episode_num, stats)
 
         return stats
 

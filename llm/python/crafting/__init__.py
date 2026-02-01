@@ -5,7 +5,7 @@ from .recipe_learner import RecipeLearner
 from .experiment_tracker import ExperimentTracker
 from .recipe_db import RecipeDatabase
 from .base_knowledge import BASE_RECIPES, BLOCK_KNOWLEDGE, MOB_KNOWLEDGE, ITEM_KNOWLEDGE, SURVIVAL_RULES, ACTION_SEQUENCES, RESOURCE_PRIORITIES, BIOME_KNOWLEDGE
-from .block_knowledge import BLOCK_DATABASE, get_block_info, should_avoid_block, get_block_priority
+from .block_knowledge import BLOCK_DATABASE, get_block_info, should_avoid, get_block_priority
 from .mob_knowledge import MOB_DATABASE, get_mob_info, get_mob_danger_level, is_mob_hostile, get_mob_strategies, get_mob_drops, get_tameable_mobs, get_hostile_mobs, get_boss_mobs
 from .vanilla_recipes import VANILLA_RECIPES
 from .enchantment_knowledge import ENCHANTMENT_DATABASE, get_enchantment_info, get_enchantments_for_item, get_best_weapon_enchantment, get_best_armor_enchantment, get_all_combat_enchantments, get_all_armor_enchantments
@@ -43,7 +43,7 @@ __all__ = [
     'AUTOMATION_SYSTEMS',
     # Block knowledge helpers
     'get_block_info',
-    'should_avoid_block',
+    'should_avoid',
     'get_block_priority',
     # Mob knowledge helpers
     'get_mob_info',

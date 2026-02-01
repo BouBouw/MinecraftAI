@@ -242,14 +242,38 @@ class Trainer:
                 final_inventory=final_inventory
             )
 
+        # Get reward statistics to see what the bot actually accomplished
+        reward_stats = self.env.reward_system.get_statistics()
+
         stats = {
             'episode': episode_num,
             'reward': episode_reward,
             'length': episode_length,
             'curriculum_stage': self.curriculum.current_stage_idx,
+            # Actual accomplishments
+            'blocks_mined': reward_stats.get('blocks_mined', {}),
+            'items_crafted': reward_stats.get('items_crafted', {}),
+            'blocks_placed': reward_stats.get('blocks_placed', 0),
+            'distance_traveled': reward_stats.get('distance_traveled', 0.0),
+            'discovered_blocks': reward_stats.get('discovered_blocks', 0),
+            'discovered_biomes': reward_stats.get('discovered_biomes', 0),
+            'visited_chunks': reward_stats.get('visited_chunks', 0),
         }
 
+        # Enhanced logging with accomplishments
         log_episode_end(logger, self.current_episode_id or episode_num, stats)
+
+        # Additional detailed log every episode
+        logger.info(f"📊 Episode {episode_num} Accomplishments:")
+        logger.info(f"   ⛏️  Blocks mined: {sum(reward_stats.get('blocks_mined', {}).values())} total")
+        if reward_stats.get('blocks_mined'):
+            for block_type, count in reward_stats['blocks_mined'].items():
+                if count > 0:
+                    logger.info(f"      - Block type {block_type}: {count}")
+        logger.info(f"   🔨 Items crafted: {sum(reward_stats.get('items_crafted', {}).values())} total")
+        logger.info(f"   🧱 Blocks placed: {reward_stats.get('blocks_placed', 0)}")
+        logger.info(f"   🚶 Distance: {reward_stats.get('distance_traveled', 0.0):.1f} blocks")
+        logger.info(f"   🔬 Discoveries: {reward_stats.get('discovered_blocks', 0)} block types, {reward_stats.get('visited_chunks', 0)} chunks")
 
         return stats
 
@@ -258,11 +282,15 @@ class Trainer:
         agent_stats = self.agent.get_statistics()
         curriculum_progress = self.curriculum.get_progress_summary()
 
+        # Get current stage object for better info
+        current_stage = self.curriculum.get_current_stage()
+        stage_name = current_stage.name if current_stage else 'unknown'
+
         logger.info(
-            f"Episode {episode_num} | "
-            f"Reward: {episode_stats['reward']:.2f} | "
+            f"📈 Episode {episode_num} | "
+            f"Reward: {episode_stats['reward']:.1f} | "
             f"Length: {episode_stats['length']} | "
-            f"Stage: {curriculum_progress['current_stage']} | "
+            f"Stage: {stage_name} | "
             f"Progress: {curriculum_progress['progress_percentage']:.1f}%"
         )
 

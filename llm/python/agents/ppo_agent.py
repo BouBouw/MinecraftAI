@@ -295,12 +295,20 @@ class PPOAgent:
                 batch_returns = returns_tensor[batch_indices]
                 batch_advantages = advantages[batch_indices]
 
+                # Debug logging
+                if len(batch_obs) != len(batch_actions):
+                    logger.warning(f"Batch indices size: {len(batch_indices)}, batch_obs size: {len(batch_obs)}, batch_actions size: {len(batch_actions)}")
+                    logger.warning(f"Total observations: {len(observations)}, Total actions: {len(actions)}")
+                    continue
+
                 # Skip if batch is empty or too small
                 if len(batch_obs) == 0:
+                    logger.warning("Empty batch_obs, skipping")
                     continue
 
                 # Ensure batch size matches
                 if len(batch_obs) != len(batch_actions):
+                    logger.warning(f"Batch size mismatch after extraction: obs={len(batch_obs)}, actions={len(batch_actions)}")
                     continue
 
                 # Evaluate current policy
@@ -312,8 +320,12 @@ class PPOAgent:
 
                 # Stack tensors
                 stacked_obs = {}
-                for key in obs_tensors_list[0].keys():
-                    stacked_obs[key] = torch.cat([obs[key] for obs in obs_tensors_list], dim=0)
+                if len(obs_tensors_list) > 0:
+                    for key in obs_tensors_list[0].keys():
+                        stacked_obs[key] = torch.cat([obs[key] for obs in obs_tensors_list], dim=0)
+                else:
+                    logger.warning("obs_tensors_list is empty, cannot stack")
+                    continue
 
                 # Verify stacked_obs batch size matches batch_actions
                 if len(obs_tensors_list) > 0 and len(stacked_obs) > 0:
@@ -321,11 +333,18 @@ class PPOAgent:
                     stacked_batch_size = stacked_obs[first_key].size(0)
                     action_batch_size = len(batch_actions)
 
+                    logger.info(f"obs_tensors_list size: {len(obs_tensors_list)}, stacked_batch_size: {stacked_batch_size}, action_batch_size: {action_batch_size}")
+                    logger.info(f"stacked_obs keys: {list(stacked_obs.keys())}")
+                    for key, shape in [(k, v.shape) for k, v in stacked_obs.items()]:
+                        logger.info(f"  {key}: {shape}")
+
                     if stacked_batch_size != action_batch_size:
                         logger.warning(f"Batch size mismatch: stacked_obs has {stacked_batch_size}, batch_actions has {action_batch_size}. Skipping batch.")
                         continue
 
+                logger.info(f"Calling evaluate_actions with batch_actions shape: {batch_actions.shape}")
                 log_probs, values, entropy = self.model.evaluate_actions(stacked_obs, batch_actions)
+                logger.info(f"evaluate_actions returned log_probs shape: {log_probs.shape}")
 
                 # Calculate ratio
                 ratio = torch.exp(log_probs - batch_old_log_probs)

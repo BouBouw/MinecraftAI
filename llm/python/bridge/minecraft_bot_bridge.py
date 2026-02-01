@@ -232,10 +232,9 @@ class MinecraftBotBridge:
 
         await self.ws.send(json.dumps(message))
 
-        # Wait for result (with timeout)
-        result = await self._wait_for_action_result()
-
-        return result
+        # Don't wait for action_complete - just return success
+        # The action will be executed and we'll get the new state via observation loop
+        return {'success': True}
 
     async def execute_action(self, action: Any, current_state: Dict[str, Any]) -> tuple[Dict[str, Any], bool]:
         """

@@ -85,6 +85,11 @@ class MinecraftEncoder(nn.Module):
         hidden_size = network_config.get('hidden_size', 512)
         num_layers = network_config.get('num_layers', 3)
 
+        # Get observation config to determine input sizes
+        obs_config = config.get('observation_space', {})
+        visible_blocks_count = obs_config.get('visible_blocks_count', 100)
+        nearby_entities_count = obs_config.get('nearby_entities_count', 10)
+
         # Position encoder
         self.position_encoder = nn.Sequential(
             nn.Linear(3, 64),
@@ -100,8 +105,9 @@ class MinecraftEncoder(nn.Module):
         )
 
         # Visual encoder (for blocks and entities)
+        visual_input_size = visible_blocks_count * 4 + nearby_entities_count * 4
         self.visual_encoder = nn.Sequential(
-            nn.Linear(100 * 4 + 10 * 4, 512),  # blocks + entities
+            nn.Linear(visual_input_size, 512),  # blocks + entities
             nn.ReLU(),
             nn.Linear(512, 256)
         )

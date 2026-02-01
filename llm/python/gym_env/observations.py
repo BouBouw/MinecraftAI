@@ -35,33 +35,49 @@ class ObservationSpace:
 
         self.config = config
 
-        # Debug: log type of config and its keys
-        logger.info(f"config type: {type(config)}")
+        # Print statements for guaranteed visibility
+        print(f"[OBS_INIT] config type: {type(config)}")
 
         # Handle both Config objects and plain dicts
         # Check if config is a Config object (has 'config' attribute)
         if hasattr(config, 'config') and hasattr(config, 'get'):
             # This is a Config object - extract the raw dict
             raw_config = config.config
+            print("[OBS_INIT] Detected Config object, extracting raw config dict")
             logger.info("Detected Config object, extracting raw config dict")
         elif isinstance(config, dict):
             # This is already a plain dict
             raw_config = config
+            print(f"[OBS_INIT] Detected plain dict with keys: {list(config.keys())[:10]}")
             logger.info("Detected plain dict")
         else:
             # Unknown type - try to use it as-is
             raw_config = config
+            print(f"[OBS_INIT] Unknown config type: {type(config)}")
             logger.warning(f"Unknown config type: {type(config)}")
 
         # Now extract observation_space section using plain dict access
         self.obs_config = raw_config.get('observation_space', {}) if isinstance(raw_config, dict) else {}
 
         # Debug logging
+        print(f"[OBS_INIT] obs_config type: {type(self.obs_config)}")
+        print(f"[OBS_INIT] obs_config has {len(self.obs_config)} keys")
+        if self.obs_config:
+            print(f"[OBS_INIT] obs_config keys: {list(self.obs_config.keys())}")
+            print(f"[OBS_INIT] obs_config['position'] = {self.obs_config.get('position', 'NOT_FOUND')}")
+        else:
+            print("[OBS_INIT] WARNING: obs_config is empty!")
+            if isinstance(raw_config, dict):
+                print(f"[OBS_INIT] raw_config keys: {list(raw_config.keys())}")
+                print(f"[OBS_INIT] 'observation_space' in raw_config: {'observation_space' in raw_config}")
+
         logger.info(f"obs_config type: {type(self.obs_config)}")
         logger.info(f"obs_config has {len(self.obs_config)} keys: {list(self.obs_config.keys())}")
 
         # Build observation space
         self.space = self._build_observation_space()
+        print(f"[OBS_INIT] Built observation space with {len(self.space.spaces)} fields")
+        print(f"[OBS_INIT] Observation space keys: {list(self.space.spaces.keys())}")
         logger.info(f"Built observation space with {len(self.space.spaces)} fields: {list(self.space.spaces.keys())}")
 
     def _build_observation_space(self) -> spaces.Dict:
@@ -73,11 +89,18 @@ class ObservationSpace:
         """
         space_dict = {}
 
+        # Debug: Check what .get() returns for first few fields
+        pos_val = self.obs_config.get('position', True)
+        rot_val = self.obs_config.get('rotation', True)
+        print(f"[BUILD_OBS] position.get() = {pos_val} (type: {type(pos_val)})")
+        print(f"[BUILD_OBS] rotation.get() = {rot_val} (type: {type(rot_val)})")
+
         # Position and movement
         if self.obs_config.get('position', True):
             space_dict['position'] = spaces.Box(
                 low=-100000, high=100000, shape=(3,), dtype=np.float32
             )
+            print("[BUILD_OBS] Added position field")
 
         if self.obs_config.get('rotation', True):
             space_dict['rotation'] = spaces.Box(
@@ -150,6 +173,7 @@ class ObservationSpace:
                 low=0, high=1000, shape=(4,), dtype=np.int32  # head, chest, legs, feet
             )
 
+        print(f"[BUILD_OBS] Final space_dict has {len(space_dict)} fields: {list(space_dict.keys())}")
         return spaces.Dict(space_dict)
 
     def create_observation(self, raw_state: Dict[str, Any]) -> Dict[str, Any]:

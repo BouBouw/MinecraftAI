@@ -209,7 +209,6 @@ async function executeAction(action) {
                     // Calculate exact mining time based on block and tool
                     // Source: https://minecraft.wiki/w/Breaking
                     const blockHardness = targetBlock.hardness || 1;  // Default to 1 if unknown
-                    const canHarvest = targetBlock.canHarvest || false;
 
                     // Tool speed multiplier
                     let toolSpeed = 1;  // By hand (default)
@@ -231,13 +230,22 @@ async function executeAction(action) {
                         }
                     }
 
-                    // Mining speed formula (simplified from Minecraft)
-                    // time = hardness / (toolSpeed * (1 + efficiencyBonus * 0.03)) * (correctTool ? 1 : 3) * (canHarvest ? 1 : 10)
-                    const isCorrectTool = bot.canHarvestBlock(targetBlock);
-                    const toolMultiplier = isCorrectTool ? 1 : 3;
-                    const harvestMultiplier = canHarvest ? 1 : 10;
+                    // Check if bot can dig/harvest this block
+                    const canHarvest = targetBlock.canHarvest !== false;  // true or undefined = harvestable
 
-                    let miningTime = (blockHardness * toolMultiplier * harvestMultiplier) / (toolSpeed * (1 + efficiencyBonus * 0.03));
+                    // Mining speed formula (simplified from Minecraft)
+                    // time = hardness / (toolSpeed * (1 + efficiencyBonus * 0.03))
+                    // Multiply by 3 if wrong tool, 10 if not harvestable
+                    let timeMultiplier = 1;
+                    if (bestTool) {
+                        // With tool: 1x if harvestable, 10x if not
+                        timeMultiplier = canHarvest ? 1 : 10;
+                    } else {
+                        // By hand: 3x if harvestable, 10x if not
+                        timeMultiplier = canHarvest ? 3 : 10;
+                    }
+
+                    let miningTime = (blockHardness * timeMultiplier) / (toolSpeed * (1 + efficiencyBonus * 0.03));
 
                     // Add base delay (about 0.25s for arm swing animation)
                     miningTime += 0.25;

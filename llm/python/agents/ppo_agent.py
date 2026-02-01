@@ -315,6 +315,16 @@ class PPOAgent:
                 for key in obs_tensors_list[0].keys():
                     stacked_obs[key] = torch.cat([obs[key] for obs in obs_tensors_list], dim=0)
 
+                # Verify stacked_obs batch size matches batch_actions
+                if len(obs_tensors_list) > 0 and len(stacked_obs) > 0:
+                    first_key = list(stacked_obs.keys())[0]
+                    stacked_batch_size = stacked_obs[first_key].size(0)
+                    action_batch_size = len(batch_actions)
+
+                    if stacked_batch_size != action_batch_size:
+                        logger.warning(f"Batch size mismatch: stacked_obs has {stacked_batch_size}, batch_actions has {action_batch_size}. Skipping batch.")
+                        continue
+
                 log_probs, values, entropy = self.model.evaluate_actions(stacked_obs, batch_actions)
 
                 # Calculate ratio

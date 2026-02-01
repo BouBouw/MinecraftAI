@@ -17,7 +17,11 @@ app.use(express.json());
 const MC_HOST = process.env.MC_HOST || 'localhost';
 const MC_PORT = parseInt(process.env.MC_PORT) || 25565;
 const MC_USERNAME = process.env.MC_USERNAME || 'RLBOT_24_7';
-const WS_PORT = 8765;
+
+// Parse command line arguments for --port
+const args = process.argv.slice(2);
+const portArg = args.find(arg => arg.startsWith('--port='));
+const WS_PORT = portArg ? parseInt(portArg.split('=')[1]) : (process.env.WS_PORT ? parseInt(process.env.WS_PORT) : 8765);
 
 console.log('🚀 Starting RL Bridge Server...');
 console.log(`📍 Minecraft: ${MC_HOST}:${MC_PORT}`);

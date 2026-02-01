@@ -15,19 +15,21 @@ environment:
 # RL Agent Configuration
 agent:
   type: PPO  # PPO, DQN, A2C
-  learning_rate: 0.0001  # Reduced from 0.0003 for more stability
+  learning_rate: 0.0003  # Augmenté de 0.0001 pour plus rapide apprentissage
   gamma: 0.99
   gae_lambda: 0.95
   clip_range: 0.2
-  entropy_coef: 0.05  # Reduced from 0.2 - less random exploration, more focused
+  entropy_coef: 0.2  # Augmenté de 0.05 → 4x plus d'exploration !
   vf_coef: 0.5
   max_grad_norm: 0.5
 
-  # Network architecture
+  # Network architecture - OPTIMISÉ
   network:
-    hidden_size: 512
-    num_layers: 3
-    activation: relu  # relu, tanh, leaky_relu
+    hidden_size: 256  # Réduit de 512 → 2x plus rapide !
+    num_layers: 4     # Augmenté de 3 → plus expressif
+    activation: leaky_relu  # Meilleur gradient flow
+    use_layer_norm: true  # Stabilise l'entraînement
+    use_residual: true  # Skip connections (ResNet-like)
 
 # Training Configuration
 training:

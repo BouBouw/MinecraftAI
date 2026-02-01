@@ -65,6 +65,27 @@ class MinecraftCNN(nn.Module):
         return x
 
 
+class ResidualBlock(nn.Module):
+    """
+    Residual block with optional LayerNorm
+    """
+    def __init__(self, hidden_size: int, activation_fn, use_layer_norm: bool = False):
+        super().__init__()
+
+        layers = []
+        if use_layer_norm:
+            layers.append(nn.LayerNorm(hidden_size))
+        layers.extend([
+            nn.Linear(hidden_size, hidden_size),
+            activation_fn
+        ])
+
+        self.layers = nn.Sequential(*layers)
+
+    def forward(self, x):
+        return x + self.layers(x)
+
+
 class MinecraftEncoder(nn.Module):
     """
     Encodes different parts of the observation into a unified feature vector
@@ -84,6 +105,20 @@ class MinecraftEncoder(nn.Module):
 
         hidden_size = network_config.get('hidden_size', 512)
         num_layers = network_config.get('num_layers', 3)
+        use_layer_norm = network_config.get('use_layer_norm', False)
+        use_residual = network_config.get('use_residual', False)
+        activation = network_config.get('activation', 'relu')
+
+        # Store for forward method
+        self.use_residual = use_residual
+
+        # Choose activation function
+        if activation == 'leaky_relu':
+            activation_fn = nn.LeakyReLU(0.01)
+        elif activation == 'tanh':
+            activation_fn = nn.Tanh()
+        else:  # relu
+            activation_fn = nn.ReLU()
 
         # Get observation config to determine input sizes
         obs_config = config.get('observation_space', {})
@@ -91,50 +126,89 @@ class MinecraftEncoder(nn.Module):
         nearby_entities_count = obs_config.get('nearby_entities_count', 10)
 
         # Position encoder
-        self.position_encoder = nn.Sequential(
+        position_layers = [
             nn.Linear(3, 64),
-            nn.ReLU(),
-            nn.Linear(64, 64)
-        )
+            activation_fn,
+        ]
+        if use_layer_norm:
+            position_layers.append(nn.LayerNorm(64))
+        position_layers.extend([
+            nn.Linear(64, 64),
+            activation_fn
+        ])
+        self.position_encoder = nn.Sequential(*position_layers)
 
         # Inventory encoder
-        self.inventory_encoder = nn.Sequential(
+        inventory_layers = [
             nn.Linear(36 * 2, 256),
-            nn.ReLU(),
-            nn.Linear(256, 256)
-        )
+            activation_fn,
+        ]
+        if use_layer_norm:
+            inventory_layers.append(nn.LayerNorm(256))
+        inventory_layers.extend([
+            nn.Linear(256, 256),
+            activation_fn
+        ])
+        self.inventory_encoder = nn.Sequential(*inventory_layers)
 
         # Visual encoder (for blocks and entities)
         visual_input_size = visible_blocks_count * 4 + nearby_entities_count * 4
-        self.visual_encoder = nn.Sequential(
-            nn.Linear(visual_input_size, 512),  # blocks + entities
-            nn.ReLU(),
-            nn.Linear(512, 256)
-        )
+        visual_layers = [
+            nn.Linear(visual_input_size, 512),
+            activation_fn,
+        ]
+        if use_layer_norm:
+            visual_layers.append(nn.LayerNorm(512))
+        visual_layers.extend([
+            nn.Linear(512, 256),
+            activation_fn
+        ])
+        self.visual_encoder = nn.Sequential(*visual_layers)
 
         # Environment encoder
-        self.env_encoder = nn.Sequential(
-            nn.Linear(9, 64),  # health, food, time, etc. + block_in_front
-            nn.ReLU(),
-            nn.Linear(64, 64)
-        )
+        env_layers = [
+            nn.Linear(9, 64),
+            activation_fn,
+        ]
+        if use_layer_norm:
+            env_layers.append(nn.LayerNorm(64))
+        env_layers.extend([
+            nn.Linear(64, 64),
+            activation_fn
+        ])
+        self.env_encoder = nn.Sequential(*env_layers)
 
         # Feature fusion
         total_features = 64 + 256 + 256 + 64  # position + inventory + visual + env
-        self.fusion = nn.Sequential(
+        fusion_layers = [
             nn.Linear(total_features, hidden_size),
-            nn.ReLU()
-        )
+            activation_fn
+        ]
+        if use_layer_norm:
+            fusion_layers.append(nn.LayerNorm(hidden_size))
+        self.fusion = nn.Sequential(*fusion_layers)
 
-        # Additional layers
+        # Additional layers with optional residual connections
+        if use_residual:
+            self.additional_layers = self._build_residual_layers(hidden_size, num_layers, activation_fn, use_layer_norm)
+        else:
+            layers = []
+            for _ in range(num_layers - 1):
+                layer_list = [
+                    nn.Linear(hidden_size, hidden_size),
+                    activation_fn
+                ]
+                if use_layer_norm:
+                    layer_list.append(nn.LayerNorm(hidden_size))
+                layers.extend(layer_list)
+            self.additional_layers = nn.Sequential(*layers)
+
+    def _build_residual_layers(self, hidden_size: int, num_layers: int, activation_fn, use_layer_norm: bool):
+        """Build layers with residual connections"""
         layers = []
         for _ in range(num_layers - 1):
-            layers.extend([
-                nn.Linear(hidden_size, hidden_size),
-                nn.ReLU()
-            ])
-
-        self.additional_layers = nn.Sequential(*layers)
+            layers.append(ResidualBlock(hidden_size, activation_fn, use_layer_norm))
+        return nn.Sequential(*layers)
 
     def forward(self, observations: Dict[str, torch.Tensor]) -> torch.Tensor:
         """

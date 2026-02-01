@@ -316,6 +316,13 @@ class PPOAgent:
                     continue
 
                 # Evaluate current policy
+                # Log first observation before conversion
+                if len(batch_obs) > 0:
+                    logger.info(f"  First batch_obs keys: {list(batch_obs[0].keys()) if isinstance(batch_obs[0], dict) else 'not a dict'}")
+                    if isinstance(batch_obs[0], dict) and len(batch_obs[0]) > 0:
+                        for key, val in list(batch_obs[0].items())[:3]:
+                            logger.info(f"    {key}: type={type(val)}, value={val if not isinstance(val, np.ndarray) else f'array shape {val.shape}'}")
+
                 obs_tensors_list = [self._observation_to_tensors(obs) for obs in batch_obs]
 
                 logger.info(f"  Created obs_tensors_list: len={len(obs_tensors_list)}")

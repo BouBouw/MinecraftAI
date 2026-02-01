@@ -332,7 +332,7 @@ class MinecraftBridgeServer extends EventEmitter {
      * Get current game state from bot
      */
     getCurrentState() {
-        if (!this.botClient || !this.botClient.mineflayerBot) {
+        if (!this.botClient || !this.botClient.mineflayerBot || !this.botClient.isInGame) {
             // Return default state for testing
             return this.getDefaultState();
         }

@@ -207,6 +207,17 @@ class PPOAgent:
         # Get available actions from curriculum
         available_actions = self._get_available_actions()
 
+        # CRITICAL: Prevent mining air by removing ATTACK action when facing air
+        # This prevents spam while the network learns the correlation
+        block_in_front = observation.get('block_in_front', 0)
+        if block_in_front == 0:
+            # Block in front is air - remove ATTACK/MINE actions (12 and 17)
+            # to prevent spam while network learns
+            available_actions = [a for a in available_actions if a not in [12, 17]]
+            if len(available_actions) == 0:
+                # Fallback to NOOP if all actions were masked
+                available_actions = [0]
+
         with torch.no_grad():
             logits = self.model.actor(obs_tensors)
 

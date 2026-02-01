@@ -380,12 +380,15 @@ class IntrinsicCuriosityModule:
         next_obs_tensors = torch.stack([self._obs_to_tensor(obs) for obs in next_observations]).to(self.device).float()
         action_tensors = F.one_hot(torch.tensor(actions), 50).float().to(self.device)
 
+        # Convert actions to long tensor for cross_entropy (class indices)
+        action_targets = torch.tensor(actions, dtype=torch.long).to(self.device)
+
         # Train ICM
         self.icm_optimizer.zero_grad()
 
         # Inverse model loss
         pred_actions = self.inverse_model(obs_tensors, next_obs_tensors)
-        inverse_loss = F.cross_entropy(pred_actions, torch.tensor(actions).to(self.device))
+        inverse_loss = F.cross_entropy(pred_actions, action_targets)
 
         # Forward model loss
         pred_next_features = self.forward_model(obs_tensors, action_tensors)

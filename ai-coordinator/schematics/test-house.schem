@@ -1,0 +1,20 @@
+{
+  "Version": 2,
+  "DataVersion": 8,
+  "Width": 5,
+  "Height": 4,
+  "Length": 5,
+  "Palette": {
+    "minecraft:air": 0,
+    "minecraft:stone": 1,
+    "minecraft:oak_planks": 2,
+    "minecraft:oak_log": 3,
+    "minecraft:glass": 4,
+    "minecraft:crafting_table": 5,
+    "minecraft:chest": 6,
+    "minecraft:torch": 7
+  },
+  "BlockData": {
+    "Data": "EwAAAAABCAlIBAAABAAAAIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+  }
+}

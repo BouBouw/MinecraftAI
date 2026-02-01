@@ -242,8 +242,12 @@ class PPOAgent:
         Returns:
             Dictionary with training metrics
         """
+        # Ensure we have enough samples for at least one batch
         if len(self.rollout_buffer) < self.batch_size:
             return {}
+
+        # Ensure batch_size doesn't exceed buffer size
+        batch_size = min(self.batch_size, len(self.rollout_buffer))
 
         # Calculate returns
         returns = self.rollout_buffer.get_returns(
@@ -270,7 +274,6 @@ class PPOAgent:
 
         for epoch in range(self.n_epochs):
             # Create mini-batches
-            batch_size = min(self.batch_size, len(observations))
             indices = np.random.permutation(len(observations))
 
             for start in range(0, len(observations), batch_size):

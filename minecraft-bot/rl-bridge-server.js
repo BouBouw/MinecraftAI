@@ -127,12 +127,50 @@ async function executeAction(action) {
             await new Promise(resolve => setTimeout(resolve, 100));
             bot.setControlState('back', false);
             break;
+        case 3: // MOVE_LEFT (strafe)
+            bot.setControlState('left', true);
+            await new Promise(resolve => setTimeout(resolve, 100));
+            bot.setControlState('left', false);
+            break;
+        case 4: // MOVE_RIGHT (strafe)
+            bot.setControlState('right', true);
+            await new Promise(resolve => setTimeout(resolve, 100));
+            bot.setControlState('right', false);
+            break;
         case 5: // JUMP
             bot.setControlState('jump', true);
             await new Promise(resolve => setTimeout(resolve, 100));
             bot.setControlState('jump', false);
             break;
-        // Add more action mappings as needed
+        case 6: // SNEAK
+            bot.setControlState('sneak', true);
+            await new Promise(resolve => setTimeout(resolve, 100));
+            bot.setControlState('sneak', false);
+            break;
+        case 7: // SPRINT
+            bot.setControlState('sprint', true);
+            await new Promise(resolve => setTimeout(resolve, 100));
+            bot.setControlState('sprint', false);
+            break;
+        case 8: // LOOK_LEFT
+            bot.look(bot.entity.yaw + 0.2, bot.entity.pitch);
+            await new Promise(resolve => setTimeout(resolve, 100));
+            break;
+        case 9: // LOOK_RIGHT
+            bot.look(bot.entity.yaw - 0.2, bot.entity.pitch);
+            await new Promise(resolve => setTimeout(resolve, 100));
+            break;
+        case 10: // LOOK_UP
+            bot.look(bot.entity.yaw, bot.entity.pitch + 0.2);
+            await new Promise(resolve => setTimeout(resolve, 100));
+            break;
+        case 11: // LOOK_DOWN
+            bot.look(bot.entity.yaw, bot.entity.pitch - 0.2);
+            await new Promise(resolve => setTimeout(resolve, 100));
+            break;
+        case 12: // ATTACK
+            await bot.attack();
+            break;
         default:
             console.log(`Unknown action type: ${actionType}`);
     }

@@ -135,39 +135,39 @@ class Curriculum:
                 'steps': 50000,  # 50K steps
                 'actions': [0, 1, 2, 5, 8, 9, 10, 11, 12],  # NOOP, MOVE, JUMP, LOOK
                 'reward_scale': 1.0,
-                'success_threshold': 50000.0,  # Must avg 50K reward over 10 episodes
+                'success_threshold': 5000.0,  # Must avg 5K reward (reduced from 50K)
                 'description': 'Learn basic movement and controls'
             },
             {
                 'name': 'gathering',
                 'steps': 250000,  # 250K steps
                 'actions': [0, 1, 2, 5, 8, 9, 10, 11, 12, 17, 21, 22, 23],  # + ATTACK, DIG
-                'reward_scale': 2.0,
-                'success_threshold': 150000.0,  # Must avg 150K reward
+                'reward_scale': 1.2,  # Reduced from 2.0
+                'success_threshold': 10000.0,  # Must avg 10K reward (reduced from 150K)
                 'description': 'Learn to gather resources by mining and attacking'
             },
             {
                 'name': 'basic_crafting',
                 'steps': 750000,  # 750K steps
                 'actions': 'all',  # All actions available
-                'reward_scale': 5.0,
-                'success_threshold': 400000.0,  # Must avg 400K reward
+                'reward_scale': 1.5,  # Reduced from 5.0
+                'success_threshold': 20000.0,  # Must avg 20K reward (reduced from 400K)
                 'description': 'Learn basic crafting recipes'
             },
             {
                 'name': 'survival',
                 'steps': 2000000,  # 2M steps
                 'actions': 'all',
-                'reward_scale': 10.0,
-                'success_threshold': 800000.0,  # Must avg 800K reward
+                'reward_scale': 2.0,  # Reduced from 10.0
+                'success_threshold': 40000.0,  # Must avg 40K reward (reduced from 800K)
                 'description': 'Learn to survive against mobs and at night'
             },
             {
                 'name': 'building',
                 'steps': 5000000,  # 5M steps
                 'actions': 'all',
-                'reward_scale': 15.0,
-                'success_threshold': 1200000.0,  # Must avg 1.2M reward
+                'reward_scale': 2.5,  # Reduced from 15.0
+                'success_threshold': 60000.0,  # Must avg 60K reward (reduced from 1.2M)
                 'description': 'Learn to build structures and shelters'
             }
         ]

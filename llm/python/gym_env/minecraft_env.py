@@ -31,18 +31,20 @@ class MinecraftEnv(gym.Env):
         'render_fps': 20,
     }
 
-    def __init__(self, config: Dict[str, Any], bridge_client=None):
+    def __init__(self, config: Dict[str, Any], curriculum=None, bridge_client=None):
         """
         Initialize Minecraft environment
 
         Args:
             config: Configuration dictionary
+            curriculum: Curriculum object (optional)
             bridge_client: Client for communicating with Node.js bridge
         """
         super().__init__()
 
         self.config = config
         self.bridge = bridge_client
+        self.curriculum = curriculum  # Store curriculum object
 
         # Initialize components
         self.observation_space_impl = create_observation_space(config)
@@ -135,9 +137,18 @@ class MinecraftEnv(gym.Env):
         observation = self.observation_space_impl.create_observation(self.current_state)
 
         # Info dictionary
+        # Get stage name from curriculum object if available, otherwise fallback to config
+        stage_name = 'unknown'
+        if self.curriculum:
+            stage_obj = self.curriculum.get_current_stage()
+            if stage_obj:
+                stage_name = stage_obj.name
+        elif self.current_stage < len(self.curriculum_stages):
+            stage_name = self.curriculum_stages[self.current_stage].get('name', 'unknown')
+
         info = {
             'episode_id': self.episode_id,
-            'stage': self.curriculum_stages[self.current_stage].get('name', 'unknown') if self.current_stage < len(self.curriculum_stages) else 'unknown',
+            'stage': stage_name,
         }
 
         return observation, info
@@ -196,8 +207,16 @@ class MinecraftEnv(gym.Env):
         )
 
         # Apply curriculum reward shaping
-        if self.current_stage < len(self.curriculum_stages):
+        # Get stage name from curriculum object if available
+        stage_name = ''
+        if self.curriculum:
+            stage_obj = self.curriculum.get_current_stage()
+            if stage_obj:
+                stage_name = stage_obj.name
+        elif self.current_stage < len(self.curriculum_stages):
             stage_name = self.curriculum_stages[self.current_stage].get('name', '')
+
+        if stage_name:
             reward = self.reward_shaper.shape_reward(reward, stage_name)
 
         # Check termination conditions
@@ -321,15 +340,16 @@ class MinecraftEnv(gym.Env):
         return f"MinecraftEnv(episode={self.episode_id}, stage={self.current_stage})"
 
 
-def create_minecraft_env(config: Dict[str, Any], bridge_client=None) -> MinecraftEnv:
+def create_minecraft_env(config: Dict[str, Any], curriculum=None, bridge_client=None) -> MinecraftEnv:
     """
     Factory function to create Minecraft environment
 
     Args:
         config: Configuration dictionary
+        curriculum: Curriculum object (optional)
         bridge_client: Bridge client for communication
 
     Returns:
         MinecraftEnv instance
     """
-    return MinecraftEnv(config, bridge_client)
+    return MinecraftEnv(config, curriculum, bridge_client)

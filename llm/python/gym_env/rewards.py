@@ -80,8 +80,9 @@ class RewardSystem:
         # 4. Achievement rewards (first-time bonuses)
         reward += self._achievement_reward(state, action, next_state)
 
-        # 5. Time penalty (efficiency)
-        reward += self.reward_config.get('time_penalty', -0.01)
+        # 5. Time penalty (encourage efficiency)
+        # Small penalty per step to encourage efficient behavior
+        reward += self.reward_config.get('time_penalty', -0.1)
 
         # 6. Episode completion reward
         if done:
@@ -90,24 +91,14 @@ class RewardSystem:
         return reward
 
     def _survival_reward(self, state: Dict[str, Any], next_state: Dict[str, Any]) -> float:
-        """Calculate survival-based rewards"""
+        """
+        Calculate survival-based rewards
+        REMOVED passive health/food bonuses - no free rewards for just existing
+        Only penalties for damage/death
+        """
         reward = 0.0
 
-        # Health bonus (handle both list [health] and scalar health)
-        health_bonus = self.reward_config.get('health_bonus', 0.1)
-        health = next_state.get('health', [20])
-        if isinstance(health, list):
-            health = health[0] if len(health) > 0 else 20
-        reward += health * health_bonus
-
-        # Food bonus (handle both list [food] and scalar food)
-        food_bonus = self.reward_config.get('food_bonus', 0.05)
-        food = next_state.get('food', [20])
-        if isinstance(food, list):
-            food = food[0] if len(food) > 0 else 20
-        reward += food * food_bonus
-
-        # Death penalty
+        # Death penalty (only penalty, no passive bonuses)
         health_check = next_state.get('health', [20])
         if isinstance(health_check, list):
             health_check = health_check[0] if len(health_check) > 0 else 20
@@ -124,7 +115,7 @@ class RewardSystem:
             next_health = next_health[0] if len(next_health) > 0 else 20
         health_lost = state_health - next_health
         if health_lost > 0:
-            reward -= health_lost * 2.0
+            reward -= health_lost * 5.0  # Increased penalty for taking damage
 
         return reward
 
@@ -134,7 +125,10 @@ class RewardSystem:
         action: Any,
         next_state: Dict[str, Any]
     ) -> float:
-        """Calculate progression-based rewards"""
+        """
+        Calculate progression-based rewards
+        Rewards are based on actions taken, not passive survival
+        """
         reward = 0.0
 
         # Handle both int actions (from agent) and dict actions (from bridge)
@@ -145,39 +139,35 @@ class RewardSystem:
             action_type = action.get('action_type', 0)
             target_block = action.get('target_block', 0)
 
-        # Mining rewards
+        # Mining rewards - small reward per action (encourage action)
         if action_type in [17, 20, 21, 22, 23]:  # ATTACK, BREAK_BLOCK, DIG_*
-            block_mined = self.reward_config.get('block_mined', 0.5)
-            reward += block_mined
+            reward += 1.0  # Fixed reward per mining action
 
-            # Check for new block type (only available if action is dict)
+            # Big bonus for discovering new block type
             if isinstance(action, dict):
                 mined_block = target_block
                 if mined_block not in self.discovered_blocks:
                     self.discovered_blocks.add(mined_block)
-                    new_block_bonus = self.reward_config.get('new_block_type', 10)
-                    reward += new_block_bonus
+                    reward += 20.0  # Significant bonus for new discovery
 
                 self.episode_mined_blocks[mined_block] += 1
 
-        # Crafting rewards
+        # Crafting rewards - higher value (more complex)
         elif action_type in [27, 28]:  # CRAFT_ITEM, CRAFT_UNKNOWN
-            item_crafted = self.reward_config.get('item_crafted', 2)
-            reward += item_crafted
+            reward += 5.0  # Higher reward for crafting (more valuable)
 
             if isinstance(action, dict):
                 crafted_item = target_block
                 self.episode_crafted_items[crafted_item] += 1
 
-        # Building rewards
+        # Building rewards - medium value
         elif action_type == 19:  # PLACE_BLOCK
-            block_placed = self.reward_config.get('block_placed', 1)
-            reward += block_placed
+            reward += 1.5  # Medium reward for building
             self.episode_placed_blocks += 1
 
-        # Eating rewards
+        # Eating rewards - encourage survival behavior
         elif action_type == 31:  # EAT
-            reward += 1.0  # Small bonus for eating
+            reward += 2.0  # Eating is good
 
         return reward
 
@@ -225,7 +215,10 @@ class RewardSystem:
         action: Any,
         next_state: Dict[str, Any]
     ) -> float:
-        """Calculate first-time achievement bonuses"""
+        """
+        Calculate first-time achievement bonuses
+        Large bonuses for discovering new things
+        """
         reward = 0.0
 
         # Handle both int actions (from agent) and dict actions (from bridge)
@@ -236,26 +229,28 @@ class RewardSystem:
             action_type = action.get('action_type', 0)
             crafted_item = action.get('target_block', 0)
 
-        # First craft discovery
+        # First craft discovery - BIG bonus (crafting is complex)
         if action_type in [27, 28]:  # CRAFT_ITEM, CRAFT_UNKNOWN
-            if crafted_item not in self.discovered_crafts:
+            if crafted_item not in self.discovered_crafts and crafted_item != 0:
                 self.discovered_crafts.add(crafted_item)
-                new_craft_bonus = self.reward_config.get('new_craft_discovered', 100)
-                reward += new_craft_bonus
+                reward += 50.0  # Significant bonus for new craft discovery
 
-        # First tool use
-        # First armor equipped
-        # First night survived
-        # First shelter built
-        # etc.
+        # First tool use (could add tracking later)
+        # First armor equipped (could add tracking later)
+        # First night survived (could add tracking later)
+        # First shelter built (could add tracking later)
 
         return reward
 
     def _episode_completion_reward(self, final_state: Dict[str, Any]) -> float:
-        """Calculate episode completion reward"""
+        """
+        Calculate episode completion reward
+        Bonus rewards based on actual accomplishments during episode
+        """
         reward = 0.0
 
         # Survival bonus (handle both list [health] and scalar health)
+        # Only give survival bonus if still alive
         health = final_state.get('health', [20])
         if isinstance(health, list):
             health = health[0] if len(health) > 0 else 20
@@ -263,14 +258,32 @@ class RewardSystem:
             survival_bonus = self.reward_config.get('survival_bonus', 100)
             reward += survival_bonus
 
-        # Building bonus
-        if self.episode_placed_blocks > 10:
-            reward += 50  # Bonus for building something
+        # Building bonus - tiered based on amount
+        if self.episode_placed_blocks > 50:
+            reward += 100  # Big bonus for significant building
+        elif self.episode_placed_blocks > 20:
+            reward += 50  # Medium bonus
 
-        # Mining bonus
+        # Mining bonus - tiered based on amount
         total_mined = sum(self.episode_mined_blocks.values())
-        if total_mined > 50:
-            reward += 20  # Bonus for significant mining
+        if total_mined > 100:
+            reward += 50  # Bonus for significant mining
+        elif total_mined > 50:
+            reward += 25  # Medium bonus
+
+        # Crafting bonus - tiered based on items crafted
+        total_crafted = sum(self.episode_crafted_items.values())
+        if total_crafted > 20:
+            reward += 100  # Big bonus for lots of crafting
+        elif total_crafted > 10:
+            reward += 50  # Medium bonus
+        elif total_crafted > 0:
+            reward += 10  # Small bonus for crafting anything
+
+        # Discovery bonus - new things discovered
+        discoveries = len(self.discovered_blocks) + len(self.discovered_crafts)
+        if discoveries > 10:
+            reward += 50  # Bonus for exploration
 
         return reward
 

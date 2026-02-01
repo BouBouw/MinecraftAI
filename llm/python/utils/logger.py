@@ -222,12 +222,60 @@ def get_logger(name: str) -> logging.Logger:
 
 
 def log_episode_start(logger: logging.Logger, episode_id: int, info: Dict[str, Any]):
-    """Log episode start"""
-    logger.info(f"Episode {episode_id} started", extra={'extra': info})
+    """
+    Log episode start with stage information
+
+    Args:
+        logger: Logger instance
+        episode_id: Episode number
+        info: Dictionary with episode information including:
+            - stage: Current curriculum stage
+    """
+    stage = info.get('stage', 'unknown')
+    logger.info(f"🚀 Episode {episode_id} started - Stage: {stage}", extra={'extra': info})
 
 
 def log_episode_end(logger: logging.Logger, episode_id: int, info: Dict[str, Any]):
-    """Log episode end"""
+    """
+    Log episode end with detailed statistics
+
+    Args:
+        logger: Logger instance
+        episode_id: Episode number
+        info: Dictionary with episode statistics including:
+            - reward: Total reward
+            - length: Episode length
+            - curriculum_stage: Current stage
+            - reward_statistics: Dict with blocks_mined, items_crafted, etc.
+    """
+    # Build detailed log message
+    reward = info.get('reward', 0)
+    length = info.get('length', 0)
+    stage = info.get('curriculum_stage', 'unknown')
+
+    logger.info(f"📊 Episode {episode_id} complete - Reward: {reward:.1f}, Steps: {length}, Stage: {stage}")
+
+    # Log accomplishment statistics if available
+    reward_stats = info.get('reward_statistics', {})
+    if reward_stats:
+        blocks_mined = reward_stats.get('blocks_mined', {})
+        total_blocks = sum(blocks_mined.values()) if blocks_mined else 0
+
+        items_crafted = reward_stats.get('items_crafted', {})
+        total_items = sum(items_crafted.values()) if items_crafted else 0
+
+        blocks_placed = reward_stats.get('blocks_placed', 0)
+        discovered_blocks = reward_stats.get('discovered_blocks', 0)
+
+        logger.info(
+            f"   📈 Accomplishments: "
+            f"Mined: {total_blocks} blocks, "
+            f"Crafted: {total_items} items, "
+            f"Placed: {blocks_placed} blocks, "
+            f"Discovered: {discovered_blocks} new types"
+        )
+
+    # Log to structured format for analysis
     logger.info(f"Episode {episode_id} ended", extra={'extra': info})
 
 

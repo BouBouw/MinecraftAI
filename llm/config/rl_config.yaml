@@ -15,11 +15,11 @@ environment:
 # RL Agent Configuration
 agent:
   type: PPO  # PPO, DQN, A2C
-  learning_rate: 0.0003
+  learning_rate: 0.0001  # Reduced from 0.0003 for more stability
   gamma: 0.99
   gae_lambda: 0.95
   clip_range: 0.2
-  entropy_coef: 0.01
+  entropy_coef: 0.05  # Increased from 0.01 for more exploration
   vf_coef: 0.5
   max_grad_norm: 0.5
 
@@ -62,8 +62,8 @@ training:
 
   # Training parameters
   total_timesteps: 10000000
-  batch_size: 64
-  n_steps: 2048
+  batch_size: 128  # Increased from 64 for more reliable estimates
+  n_steps: 4096  # Increased from 2048 for more steps before update
   n_epochs: 10
 
   # Save frequency

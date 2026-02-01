@@ -242,12 +242,19 @@ class PPOAgent:
         Returns:
             Dictionary with training metrics
         """
+        buffer_size = len(self.rollout_buffer)
+
         # Ensure we have enough samples for at least one batch
-        if len(self.rollout_buffer) < self.batch_size:
+        # Also require minimum samples to avoid edge cases
+        min_samples = max(2, self.batch_size)
+        if buffer_size < min_samples:
+            logger.debug(f"Buffer size {buffer_size} < minimum {min_samples}, skipping update")
             return {}
 
         # Ensure batch_size doesn't exceed buffer size
-        batch_size = min(self.batch_size, len(self.rollout_buffer))
+        batch_size = min(self.batch_size, buffer_size)
+
+        logger.debug(f"Starting PPO update with {buffer_size} samples, batch_size={batch_size}")
 
         # Calculate returns
         returns = self.rollout_buffer.get_returns(
@@ -288,8 +295,20 @@ class PPOAgent:
                 batch_returns = returns_tensor[batch_indices]
                 batch_advantages = advantages[batch_indices]
 
+                # Skip if batch is empty or too small
+                if len(batch_obs) == 0:
+                    continue
+
+                # Ensure batch size matches
+                if len(batch_obs) != len(batch_actions):
+                    continue
+
                 # Evaluate current policy
                 obs_tensors_list = [self._observation_to_tensors(obs) for obs in batch_obs]
+
+                # Skip if no observations to stack
+                if len(obs_tensors_list) == 0:
+                    continue
 
                 # Stack tensors
                 stacked_obs = {}

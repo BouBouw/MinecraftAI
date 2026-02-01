@@ -164,6 +164,34 @@ class MinecraftBotBridge:
         success = data.get('success', False)
         action = data.get('action', {})
 
+        # Store result and set event
+        self._last_action_result = data
+        self._action_complete_event.set()
+
+        # Update current_state from observation if included
+        observation_data = data.get('observation')
+        if observation_data:
+            logger.debug(f"Received observation: {list(observation_data.keys())}")
+            self.current_state = BotState(
+                position=observation_data.get('position', {}),
+                rotation=observation_data.get('rotation', {}),
+                health=observation_data.get('health', 20),
+                food=observation_data.get('food', 20),
+                saturation=observation_data.get('saturation', 20),
+                on_ground=observation_data.get('on_ground', False),
+                in_water=observation_data.get('in_water', False),
+                inventory=observation_data.get('inventory', []),
+                held_item=observation_data.get('hotbar_selected', 0),
+                armor=observation_data.get('armor', {}),
+                nearby_entities=observation_data.get('nearby_entities', []),
+                time_of_day=observation_data.get('time_of_day', 0),
+                is_raining=observation_data.get('is_raining', False),
+                biome_id=observation_data.get('biome_id', 0)
+            )
+            logger.info(f"✅ Updated state: health={self.current_state.health}, food={self.current_state.food}")
+        else:
+            logger.warning("⚠️  No observation in action_complete message")
+
         logger.debug(f"Action completed: success={success}")
 
     async def _handle_bot_state(self, data: Dict[str, Any]):
@@ -237,17 +265,11 @@ class MinecraftBotBridge:
         """
         if not self.connected or not self.ws:
             logger.error("Not connected to bot")
-            return {}
-
-        # Don't request observation - bridge sends it automatically
-        # await self.ws.send(json.dumps({'type': 'get_observation'}))
-
-        # Wait for observation (with timeout)
-        # Will be handled by _handle_observation
+            return self._get_default_observation()
 
         # Return cached state
         if self.current_state:
-            return {
+            obs = {
                 'position': self.current_state.position,
                 'rotation': self.current_state.rotation,
                 'health': self.current_state.health,
@@ -263,8 +285,30 @@ class MinecraftBotBridge:
                 'is_raining': self.current_state.is_raining,
                 'biome_id': self.current_state.biome_id,
             }
+            logger.debug(f"get_observation: health={obs['health']}, food={obs['food']}")
+            return obs
         else:
-            return {}
+            logger.warning("current_state is None, returning defaults")
+            return self._get_default_observation()
+
+    def _get_default_observation(self) -> Dict[str, Any]:
+        """Return default observation when state is not available"""
+        return {
+            'position': {'x': 0, 'y': 64, 'z': 0},
+            'rotation': {'yaw': 0, 'pitch': 0},
+            'health': 20,
+            'food': 20,
+            'saturation': 20,
+            'on_ground': True,
+            'in_water': False,
+            'inventory': [],
+            'held_item': 0,
+            'armor': {},
+            'nearby_entities': [],
+            'time_of_day': 0,
+            'is_raining': False,
+            'biome_id': 1
+        }
 
     async def reset_environment(self) -> Dict[str, Any]:
         """

@@ -7,8 +7,48 @@ import json
 import sqlite3
 from pathlib import Path
 
-def get_training_stats(log_file="training.log"):
+# Get script directory for absolute paths
+SCRIPT_DIR = Path(__file__).parent
+
+def find_log_file():
+    """Find training.log in common locations"""
+    possible_paths = [
+        SCRIPT_DIR / "training.log",
+        SCRIPT_DIR / "logs" / "training.log",
+        Path.home() / "MinecraftAI" / "llm" / "python" / "training.log",
+        Path.cwd() / "training.log",
+    ]
+    for path in possible_paths:
+        if path.exists():
+            return path
+    return None
+
+def find_db_file():
+    """Find minecraft_rl.db in common locations"""
+    possible_paths = [
+        SCRIPT_DIR / "data" / "memories" / "minecraft_rl.db",
+        SCRIPT_DIR / "data" / "minecraft_rl.db",
+        Path.home() / "MinecraftAI" / "llm" / "python" / "data" / "memories" / "minecraft_rl.db",
+        Path.cwd() / "data" / "memories" / "minecraft_rl.db",
+    ]
+    for path in possible_paths:
+        if path.exists():
+            return path
+    return None
+
+def get_training_stats(log_file=None):
     """Parse training log and show stats"""
+    if log_file is None:
+        log_file = find_log_file()
+
+    if log_file is None or not log_file.exists():
+        print("❌ No log file found")
+        print("💡 Searched in:")
+        print("   -", SCRIPT_DIR / "training.log")
+        print("   -", SCRIPT_DIR / "logs" / "training.log")
+        print("   -", Path.cwd() / "training.log")
+        return
+
     try:
         with open(log_file, 'r') as f:
             lines = f.readlines()
@@ -50,11 +90,23 @@ def get_training_stats(log_file="training.log"):
 
     except FileNotFoundError:
         print(f"❌ Log file not found: {log_file}")
+    except Exception as e:
+        print(f"❌ Error reading log file: {e}")
 
-def show_db_stats(db_path="./data/memories/minecraft_rl.db"):
+def show_db_stats(db_path=None):
     """Show database stats"""
+    if db_path is None:
+        db_path = find_db_file()
+
+    if db_path is None or not db_path.exists():
+        print("❌ No database found")
+        print("💡 Searched in:")
+        print("   -", SCRIPT_DIR / "data" / "memories" / "minecraft_rl.db")
+        print("   -", SCRIPT_DIR / "data" / "minecraft_rl.db")
+        return
+
     try:
-        conn = sqlite3.connect(db_path)
+        conn = sqlite3.connect(str(db_path))
         cursor = conn.cursor()
 
         # Get episode count
@@ -76,8 +128,11 @@ def show_db_stats(db_path="./data/memories/minecraft_rl.db"):
                 print(f"  ID {row[0]}: Stage {row[1]}, Reward {row[2]:.1f}, Died: {row[3] or 'No'}")
 
         conn.close()
-    except FileNotFoundError:
-        print(f"❌ Database not found: {db_path}")
+    except sqlite3.OperationalError as e:
+        print(f"❌ Database error: {e}")
+        print(f"💡 Tried: {db_path}")
+    except Exception as e:
+        print(f"❌ Error accessing database: {e}")
 
 if __name__ == "__main__":
     print("🔍 Minecraft RL Training Monitor\n")

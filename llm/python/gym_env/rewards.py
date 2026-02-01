@@ -93,23 +93,36 @@ class RewardSystem:
         """Calculate survival-based rewards"""
         reward = 0.0
 
-        # Health bonus
+        # Health bonus (handle both list [health] and scalar health)
         health_bonus = self.reward_config.get('health_bonus', 0.1)
-        health = next_state.get('health', 20)
+        health = next_state.get('health', [20])
+        if isinstance(health, list):
+            health = health[0] if len(health) > 0 else 20
         reward += health * health_bonus
 
-        # Food bonus
+        # Food bonus (handle both list [food] and scalar food)
         food_bonus = self.reward_config.get('food_bonus', 0.05)
-        food = next_state.get('food', 20)
+        food = next_state.get('food', [20])
+        if isinstance(food, list):
+            food = food[0] if len(food) > 0 else 20
         reward += food * food_bonus
 
         # Death penalty
-        if next_state.get('health', 20) <= 0:
+        health_check = next_state.get('health', [20])
+        if isinstance(health_check, list):
+            health_check = health_check[0] if len(health_check) > 0 else 20
+        if health_check <= 0:
             death_penalty = self.reward_config.get('death_penalty', -100)
             reward += death_penalty
 
-        # Damage penalty
-        health_lost = state.get('health', 20) - next_state.get('health', 20)
+        # Damage penalty (handle both list [health] and scalar health)
+        state_health = state.get('health', [20])
+        next_health = next_state.get('health', [20])
+        if isinstance(state_health, list):
+            state_health = state_health[0] if len(state_health) > 0 else 20
+        if isinstance(next_health, list):
+            next_health = next_health[0] if len(next_health) > 0 else 20
+        health_lost = state_health - next_health
         if health_lost > 0:
             reward -= health_lost * 2.0
 
@@ -177,9 +190,15 @@ class RewardSystem:
         reward = 0.0
 
         # New chunk exploration
-        pos = next_state.get('position', {})
-        chunk_x = int(pos.get('x', 0) // 16)
-        chunk_z = int(pos.get('z', 0) // 16)
+        pos = next_state.get('position', [0, 64, 0])
+        # Handle both list format [x, y, z] and dict format {x:, y:, z:}
+        if isinstance(pos, list):
+            x, y, z = pos[0], pos[1], pos[2]
+        else:
+            x, y, z = pos.get('x', 0), pos.get('y', 64), pos.get('z', 0)
+
+        chunk_x = int(x // 16)
+        chunk_z = int(z // 16)
         chunk_key = (chunk_x, chunk_z)
 
         if chunk_key not in self.visited_chunks:
@@ -236,8 +255,11 @@ class RewardSystem:
         """Calculate episode completion reward"""
         reward = 0.0
 
-        # Survival bonus
-        if final_state.get('health', 20) > 10:
+        # Survival bonus (handle both list [health] and scalar health)
+        health = final_state.get('health', [20])
+        if isinstance(health, list):
+            health = health[0] if len(health) > 0 else 20
+        if health > 10:
             survival_bonus = self.reward_config.get('survival_bonus', 100)
             reward += survival_bonus
 

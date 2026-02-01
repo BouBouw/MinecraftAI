@@ -399,19 +399,31 @@ class PPOModel(nn.Module):
         logits = self.actor(observations)
         values = self.critic(observations)
 
+        # Apply softmax to get probabilities
+        probs = F.softmax(logits, dim=-1)
+        log_probs = F.log_softmax(logits, dim=-1)
+
         # Mask unavailable actions if provided
         if available_actions is not None and len(available_actions) < 50:
-            mask = torch.full_like(logits, float('-inf'))
+            # Create mask (0 for unavailable, 1 for available)
+            mask = torch.zeros_like(probs)
             for action_id in available_actions:
-                mask[:, action_id] = 0  # Unmask available actions
-            logits = logits + mask
+                mask[:, action_id] = 1.0
 
-        # Calculate log probabilities
-        log_probs = F.log_softmax(logits, dim=-1)
+            # Apply mask to probabilities
+            probs = probs * mask
+
+            # Re-normalize
+            prob_sum = probs.sum(dim=-1, keepdim=True)
+            probs = probs / (prob_sum + 1e-8)
+
+            # Recalculate log_probs from masked probabilities
+            log_probs = torch.log(probs + 1e-8)
+
+        # Get log probs for taken actions
         action_log_probs = log_probs.gather(1, actions.unsqueeze(1)).squeeze(1)
 
-        # Calculate entropy
-        probs = F.softmax(logits, dim=-1)
+        # Calculate entropy (only over available actions)
         entropy = -(probs * log_probs).sum(dim=-1)
 
         return action_log_probs, values.squeeze(-1), entropy

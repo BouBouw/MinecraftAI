@@ -210,10 +210,12 @@ class PPOAgent:
         with torch.no_grad():
             logits = self.model.actor(obs_tensors)
 
-            # Mask unavailable actions
-            logits = self._mask_actions(logits, available_actions)
-
+            # Apply softmax FIRST, then mask unavailable actions
             probs = F.softmax(logits, dim=-1)
+
+            # Mask unavailable actions (set probability to 0)
+            probs = self._mask_probs(probs, available_actions)
+
             dist = Categorical(probs)
             action = dist.sample()
             log_prob = dist.log_prob(action)
@@ -279,6 +281,31 @@ class PPOAgent:
         # Apply mask
         masked_logits = logits + mask
         return masked_logits
+
+    def _mask_probs(self, probs: torch.Tensor, available_actions: List[int]) -> torch.Tensor:
+        """
+        Mask unavailable actions by setting their probabilities to 0 and re-normalizing
+
+        Args:
+            probs: Action probability tensor [1, 50]
+            available_actions: List of available action IDs
+
+        Returns:
+            Masked and re-normalized probability tensor
+        """
+        # Create mask tensor (0 for unavailable, 1 for available)
+        mask = torch.zeros_like(probs)
+        for action_id in available_actions:
+            mask[0, action_id] = 1.0
+
+        # Apply mask
+        masked_probs = probs * mask
+
+        # Re-normalize
+        prob_sum = masked_probs.sum(dim=-1, keepdim=True)
+        masked_probs = masked_probs / (prob_sum + 1e-8)  # Add epsilon to avoid division by zero
+
+        return masked_probs
 
     def update(self) -> Dict[str, float]:
         """

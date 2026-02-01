@@ -67,12 +67,10 @@ stream_to_platform() {
 
     # For now, we'll use a test pattern or color since we can't capture X11
     # TODO: Integrate with actual Minecraft bot viewer
-    TEXT="${PLATFORM_NAME} - Minecraft Bot Training - Stage: gathering - Episode: N/A"
-
     ffmpeg \
         -f lavfi -i color=c=black:s=${RESOLUTION}:r=${FPS} \
         -f lavfi -i anullsrc=r=44100:cl=mono \
-        -vf "drawtext=text=${TEXT}:x=(w-text_w)/2:y=(h-text_h)/2:fontsize=32:fontcolor=white:box=1:boxcolor=black@0.5" \
+        -vf "drawtext=text='${PLATFORM_NAME} - Minecraft Bot Training':x=(w-text_w)/2:y=(h-text_h)/2:fontsize=32:fontcolor=white:box=1:boxcolor=black@0.5" \
         -vcodec libx264 \
         -preset veryfast \
         -b:v ${BITRATE} \

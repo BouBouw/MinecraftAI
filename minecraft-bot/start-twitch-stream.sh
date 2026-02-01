@@ -57,12 +57,11 @@ echo ""
 
 # Start streaming with test pattern + text overlay
 # TODO: Replace with real bot screenshots once implemented
-TEXT="Minecraft AI Bot Training - Training RL agent 24/7 on VPS - Stage: gathering - Episode: N/A"
-
+# Note: Using escaped text for ffmpeg filter
 ffmpeg \
     -f lavfi -i color=c=black:s=${RESOLUTION}:r=${FPS} \
     -f lavfi -i anullsrc=r=44100:cl=mono \
-    -vf "drawtext=text=${TEXT}:x=(w-text_w)/2:y=(h-text_h)/2:fontsize=32:fontcolor=white:box=1:boxcolor=black@0.5" \
+    -vf "drawtext=text='Minecraft AI Bot Training | Stage: gathering':x=(w-text_w)/2:y=(h-text_h)/2:fontsize=32:fontcolor=white:box=1:boxcolor=black@0.5" \
     -vcodec libx264 \
     -preset veryfast \
     -b:v ${BITRATE} \

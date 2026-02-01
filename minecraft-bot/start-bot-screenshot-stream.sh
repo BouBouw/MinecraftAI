@@ -97,12 +97,10 @@ stream_test_pattern() {
 
     echo "📺 Streaming test pattern to $PLATFORM..."
 
-    TEXT="${PLATFORM} - Minecraft Bot Training - Bot is learning - Real POV coming soon"
-
     ffmpeg \
         -f lavfi -i color=c=black:s=${RESOLUTION}:r=${FPS} \
         -f lavfi -i anullsrc=r=44100:cl=mono \
-        -vf "drawtext=text=${TEXT}:x=(w-text_w)/2:y=(h-text_h)/2:fontsize=32:fontcolor=white:box=1:boxcolor=black@0.5" \
+        -vf "drawtext=text='${PLATFORM} - Minecraft Bot Training':x=(w-text_w)/2:y=(h-text_h)/2:fontsize=32:fontcolor=white:box=1:boxcolor=black@0.5" \
         -vcodec libx264 \
         -preset veryfast \
         -b:v ${BITRATE} \

@@ -221,7 +221,27 @@ class PPOAgent:
             log_prob = dist.log_prob(action)
             value = self.model.critic(obs_tensors)
 
+            # DEBUG: Log action selection (every 100 steps to avoid spam)
+            if hasattr(self, 'action_count'):
+                self.action_count += 1
+            else:
+                self.action_count = 0
+
+            if self.action_count % 100 == 0:
+                action_name = self._get_action_name(action.item())
+                logger.info(f"🎯 Action #{self.action_count}: {action.item()} ({action_name}) | "
+                           f"Probs: NOOP={probs[0,0]:.3f}, MOVE={probs[0,1]:.3f}, ATTACK={probs[0,17]:.3f}")
+
         return action.item(), log_prob.item(), value.item()
+
+    def _get_action_name(self, action_id: int) -> str:
+        """Get human-readable action name"""
+        action_names = {
+            0: "NOOP",
+            1: "MOVE_FORWARD",
+            17: "ATTACK/MINE"
+        }
+        return action_names.get(action_id, f"ACTION_{action_id}")
 
     def _observation_to_tensors(self, observation: Dict[str, Any]) -> Dict[str, torch.Tensor]:
         """

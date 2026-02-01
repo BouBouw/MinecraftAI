@@ -65,7 +65,10 @@ class MinecraftEnv(gym.Env):
 
         # Curriculum stage
         self.current_stage = 0
-        self.curriculum_stages = config.get('training.curriculum.stages', [])
+        # Use nested access for plain dicts (config is now a plain dict, not Config object)
+        training = config.get('training', {})
+        curriculum = training.get('curriculum', {})
+        self.curriculum_stages = curriculum.get('stages', [])
         self.available_actions = ActionType.get_basic_actions()
 
     def reset(

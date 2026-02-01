@@ -148,14 +148,24 @@ Examples:
         logger.info("🏋️ Starting training...")
 
         # Progress callback
-        def progress_callback(trainer, episode_stats):
-            """Called every episode"""
-            if episode_stats['episode'] % 100 == 0:
+        def progress_callback(trainer, stats):
+            """Called every episode/step"""
+            # Handle both single env (episode stats) and parallel env (step stats)
+            if 'episode' in stats:
+                # Single environment mode
+                if stats['episode'] % 100 == 0:
+                    logger.info(
+                        f"Episode {stats['episode']}: "
+                        f"reward={stats.get('reward', 0):.2f}, "
+                        f"length={stats.get('length', 0)}, "
+                        f"stage={stats.get('curriculum_stage', 'N/A')}"
+                    )
+            elif 'total_reward' in stats:
+                # Parallel environment mode
                 logger.info(
-                    f"Episode {episode_stats['episode']}: "
-                    f"reward={episode_stats['reward']:.2f}, "
-                    f"length={episode_stats['length']}, "
-                    f"stage={episode_stats['curriculum_stage']}"
+                    f"Steps {trainer.total_steps}: "
+                    f"avg_reward={stats['total_reward']/(stats.get('num_steps', 1) or 1):.2f}, "
+                    f"steps={stats.get('num_steps', 0)}"
                 )
 
         # Train

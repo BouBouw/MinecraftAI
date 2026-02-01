@@ -225,13 +225,16 @@ class PPOAgent:
 
         for key, value in observation.items():
             if isinstance(value, np.ndarray):
-                tensors[key] = torch.FloatTensor(value).unsqueeze(0).to(self.device)
+                # Flatten multi-dimensional arrays before adding batch dimension
+                flat_value = value.flatten()
+                tensors[key] = torch.FloatTensor(flat_value).unsqueeze(0).to(self.device)
             elif isinstance(value, (int, float)):
                 # Create 2D tensor [1, 1] for scalars
                 tensors[key] = torch.FloatTensor([[value]]).to(self.device)
             else:
                 # Create 2D tensor [1, features] for lists
-                tensors[key] = torch.FloatTensor(value).unsqueeze(0).to(self.device)
+                flat_value = np.array(value).flatten()
+                tensors[key] = torch.FloatTensor(flat_value).unsqueeze(0).to(self.device)
 
         return tensors
 

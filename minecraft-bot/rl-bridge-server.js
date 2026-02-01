@@ -284,6 +284,133 @@ async function executeAction(action) {
                 await bot.attack();
             }
             break;
+        case 18: // DROP_ITEM
+            // Drop currently held item
+            try {
+                if (bot.heldItem) {
+                    bot.toss(bot.heldItem);
+                    console.log(`📦 Dropped item: ${bot.heldItem.name}`);
+                }
+            } catch (err) {
+                console.log(`⚠️ Drop failed: ${err.message}`);
+            }
+            break;
+        case 19: // PLACE_BLOCK
+            // Place block from inventory (simplified - place in front)
+            try {
+                const heldItem = bot.heldItem;
+                if (!heldItem) {
+                    console.log(`⚠️ No item in hand to place`);
+                    break;
+                }
+
+                const pos = bot.entity.position;
+                const yaw = bot.entity.yaw;
+                const dx = -Math.sin(yaw) * 1;
+                const dz = Math.cos(yaw) * 1;
+                const targetPos = pos.offset(dx, 0, dz);
+
+                await bot.placeBlock(targetPos, bot.heldItem);
+                console.log(`🧱 Placed ${heldItem.name} at ${targetPos}`);
+            } catch (err) {
+                console.log(`⚠️ Place block failed: ${err.message}`);
+            }
+            break;
+        case 20: // DIG_DOWN
+        case 21: // DIG_UP
+        case 22: // DIG_LEFT
+        case 23: // DIG_RIGHT
+            // Directional digging - for now just treat as ATTACK/MINE
+            try {
+                const pos = bot.entity.position;
+                const yaw = bot.entity.yaw;
+
+                // Calculate direction based on action
+                let dx = 0, dy = 0, dz = 0;
+                if (actionType === 20) dy = -1;  // DOWN
+                else if (actionType === 21) dy = 1;  // UP
+                else if (actionType === 22) { dx = -Math.sin(yaw) * 1; dz = Math.cos(yaw) * 1; }  // LEFT relative to view
+                else if (actionType === 23) { dx = Math.sin(yaw) * 1; dz = -Math.cos(yaw) * 1; }  // RIGHT
+
+                const targetBlock = bot.blockAt(pos.offset(dx, dy, dz));
+
+                if (targetBlock && targetBlock.type !== 0) {
+                    console.log(`⛏️ Directional dig ${actionType}: ${targetBlock.name}`);
+                    await bot.dig(targetBlock);
+                }
+            } catch (err) {
+                console.log(`⚠️ Directional dig failed: ${err.message}`);
+            }
+            break;
+        case 24: // SORT_INVENTORY
+        case 25: // MERGE_INVENTORY
+        case 26: // SWAP_HOTBAR
+            // Inventory management - simplified for now
+            // TODO: Implement proper inventory management
+            console.log(`📦 Inventory action ${actionType} (not fully implemented)`);
+            break;
+        case 27: // CRAFT_ITEM
+        case 28: // CRAFT_UNKNOWN
+            // Crafting - requires crafting table
+            // TODO: Implement auto-crafting system
+            console.log(`🔨 Craft action ${actionType} (not yet implemented)`);
+            break;
+        case 29: // USE_ITEM
+            // Use item (right-click) - for buckets, doors, etc.
+            try {
+                bot.activateItem();
+                console.log(`✋ Used item`);
+            } catch (err) {
+                console.log(`⚠️ Use item failed: ${err.message}`);
+            }
+            break;
+        case 30: // EQUIP
+            // Equip best available tool/armor
+            try {
+                const bestTool = bot.inventory.items().find(item =>
+                    item.name.includes('pickaxe') ||
+                    item.name.includes('sword') ||
+                    item.name.includes('axe')
+                );
+                if (bestTool) {
+                    await bot.equip(bestTool, 'hand');
+                    console.log(`🔧 Equipped: ${bestTool.name}`);
+                }
+            } catch (err) {
+                console.log(`⚠️ Equip failed: ${err.message}`);
+            }
+            break;
+        case 31: // EAT
+            // Eat food from inventory
+            try {
+                // Find food item in inventory
+                const foodItems = bot.inventory.items().filter(item =>
+                    item.name.includes('bread') ||
+                    item.name.includes('apple') ||
+                    item.name.includes('meat') ||
+                    item.name.includes('fish') ||
+                    item.name.includes('carrot') ||
+                    item.name.includes('potato') ||
+                    item.name.includes('cookie') ||
+                    item.name.includes('melon') ||
+                    item.name.includes('berries') ||
+                    item.name.includes('stew') ||
+                    item.name.includes('pumpkin_pie') ||
+                    item.name.includes('cake')
+                );
+
+                if (foodItems.length > 0) {
+                    const food = foodItems[0];
+                    await bot.equip(food, 'hand');
+                    await bot.consume();
+                    console.log(`🍎 Ate ${food.name}`);
+                } else {
+                    console.log(`⚠️ No food in inventory to eat`);
+                }
+            } catch (err) {
+                console.log(`⚠️ Eat failed: ${err.message}`);
+            }
+            break;
         default:
             console.log(`Unknown action type: ${actionType}`);
     }

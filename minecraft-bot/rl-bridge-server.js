@@ -153,12 +153,13 @@ function startObservationLoop() {
             in_water: bot.entity.isInWater ? 1 : 0,
             health: bot.health,
             food: bot.food,
-            saturation: bot.saturation,
+            saturation: bot.foodSaturation || 20,  // Added saturation with fallback
             inventory: bot.inventory.slots.map(slot => [
                 slot?.type || 0,
                 slot?.count || 0
             ]).flat(),
             hotbar_selected: bot.quickBarSlot,
+            visible_blocks: [], // TODO: Implement raycasting for visible blocks
             nearby_entities: [], // TODO: Implement entity tracking
             time_of_day: bot.time.timeOfDay,
             is_raining: bot.isRaining ? 1 : 0,

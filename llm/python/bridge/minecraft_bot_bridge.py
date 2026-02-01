@@ -147,7 +147,7 @@ class MinecraftBotBridge:
             rotation=obs_data['rotation'],
             health=obs_data['health'],
             food=obs_data['food'],
-            saturation=obs_data['saturation'],
+            saturation=obs_data.get('saturation', 20),  # Default saturation if not provided
             on_ground=obs_data.get('on_ground', 1),
             in_water=obs_data.get('in_water', 0),
             inventory=obs_data['inventory'],

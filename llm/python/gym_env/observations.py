@@ -156,26 +156,38 @@ class ObservationSpace:
         # Position and movement
         if 'position' in self.space.spaces:
             pos = raw_state.get('position', {})
-            obs['position'] = np.array([
-                pos.get('x', 0),
-                pos.get('y', 0),
-                pos.get('z', 0)
-            ], dtype=np.float32)
+            # Handle both dict format {'x':, 'y':, 'z':} and list format [x, y, z]
+            if isinstance(pos, list):
+                obs['position'] = np.array(pos, dtype=np.float32)
+            else:
+                obs['position'] = np.array([
+                    pos.get('x', 0),
+                    pos.get('y', 0),
+                    pos.get('z', 0)
+                ], dtype=np.float32)
 
         if 'rotation' in self.space.spaces:
             rot = raw_state.get('rotation', {})
-            obs['rotation'] = np.array([
-                rot.get('yaw', 0),
-                rot.get('pitch', 0)
-            ], dtype=np.float32)
+            # Handle both dict format {'yaw':, 'pitch':} and list format [yaw, pitch]
+            if isinstance(rot, list):
+                obs['rotation'] = np.array(rot, dtype=np.float32)
+            else:
+                obs['rotation'] = np.array([
+                    rot.get('yaw', 0),
+                    rot.get('pitch', 0)
+                ], dtype=np.float32)
 
         if 'velocity' in self.space.spaces:
             vel = raw_state.get('velocity', {})
-            obs['velocity'] = np.array([
-                vel.get('dx', 0),
-                vel.get('dy', 0),
-                vel.get('dz', 0)
-            ], dtype=np.float32)
+            # Handle both dict format {'dx':, 'dy':, 'dz':} and list format [dx, dy, dz]
+            if isinstance(vel, list):
+                obs['velocity'] = np.array(vel, dtype=np.float32)
+            else:
+                obs['velocity'] = np.array([
+                    vel.get('dx', 0),
+                    vel.get('dy', 0),
+                    vel.get('dz', 0)
+                ], dtype=np.float32)
 
         if 'on_ground' in self.space.spaces:
             obs['on_ground'] = int(raw_state.get('on_ground', False))

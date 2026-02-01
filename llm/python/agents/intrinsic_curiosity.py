@@ -313,9 +313,9 @@ class IntrinsicCuriosityModule:
             Intrinsic reward
         """
         with torch.no_grad():
-            # Convert to tensors
-            obs_tensor = self._obs_to_tensor(observation).float()
-            next_obs_tensor = self._obs_to_tensor(next_observation).float()
+            # Convert to tensors (add batch dimension with unsqueeze)
+            obs_tensor = self._obs_to_tensor(observation).unsqueeze(0).float()
+            next_obs_tensor = self._obs_to_tensor(next_observation).unsqueeze(0).float()
             action_tensor = F.one_hot(torch.tensor(action), 50).float().to(self.device).unsqueeze(0)
 
             # 1. Curiosity bonus (ICM) - forward model prediction error
@@ -426,7 +426,7 @@ class IntrinsicCuriosityModule:
             observation: Observation dictionary
 
         Returns:
-            Flattened tensor [1, 1000]
+            Flattened tensor [1000] (no batch dimension - will be added by stack)
         """
         # Flatten all observation values
         flat_obs = []
@@ -449,7 +449,7 @@ class IntrinsicCuriosityModule:
         else:
             flat_obs = flat_obs[:1000]
 
-        return torch.FloatTensor(flat_obs).unsqueeze(0).to(self.device)
+        return torch.FloatTensor(flat_obs).to(self.device)
 
     def save(self, filepath: str):
         """Save ICM models"""

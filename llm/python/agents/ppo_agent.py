@@ -94,8 +94,10 @@ class RolloutBuffer:
                 next_non_terminal = 1.0 - self.dones[t]
 
             delta = self.rewards[t] + gamma * next_value * next_non_terminal - self.values[t]
-            advantages.insert(0, last_advantage = delta + gamma * lam * next_non_terminal * last_advantage)
-            returns.insert(0, last_value = advantages[0] + self.values[t])
+            last_advantage = delta + gamma * lam * next_non_terminal * last_advantage
+            advantages.insert(0, last_advantage)
+            last_value = advantages[0] + self.values[t]
+            returns.insert(0, last_value)
 
         return returns
 

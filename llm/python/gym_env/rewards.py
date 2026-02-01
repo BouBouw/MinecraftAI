@@ -118,34 +118,43 @@ class RewardSystem:
     def _progression_reward(
         self,
         state: Dict[str, Any],
-        action: Dict[str, Any],
+        action: Any,
         next_state: Dict[str, Any]
     ) -> float:
         """Calculate progression-based rewards"""
         reward = 0.0
-        action_type = action.get('action_type', 0)
+
+        # Handle both int actions (from agent) and dict actions (from bridge)
+        if isinstance(action, int):
+            action_type = action
+            target_block = 0  # Unknown when action is just an int
+        else:
+            action_type = action.get('action_type', 0)
+            target_block = action.get('target_block', 0)
 
         # Mining rewards
         if action_type in [17, 20, 21, 22, 23]:  # ATTACK, BREAK_BLOCK, DIG_*
             block_mined = self.reward_config.get('block_mined', 0.5)
             reward += block_mined
 
-            # Check for new block type
-            mined_block = action.get('target_block', 0)
-            if mined_block not in self.discovered_blocks:
-                self.discovered_blocks.add(mined_block)
-                new_block_bonus = self.reward_config.get('new_block_type', 10)
-                reward += new_block_bonus
+            # Check for new block type (only available if action is dict)
+            if isinstance(action, dict):
+                mined_block = target_block
+                if mined_block not in self.discovered_blocks:
+                    self.discovered_blocks.add(mined_block)
+                    new_block_bonus = self.reward_config.get('new_block_type', 10)
+                    reward += new_block_bonus
 
-            self.episode_mined_blocks[mined_block] += 1
+                self.episode_mined_blocks[mined_block] += 1
 
         # Crafting rewards
         elif action_type in [27, 28]:  # CRAFT_ITEM, CRAFT_UNKNOWN
             item_crafted = self.reward_config.get('item_crafted', 2)
             reward += item_crafted
 
-            crafted_item = action.get('target_block', 0)
-            self.episode_crafted_items[crafted_item] += 1
+            if isinstance(action, dict):
+                crafted_item = target_block
+                self.episode_crafted_items[crafted_item] += 1
 
         # Building rewards
         elif action_type == 19:  # PLACE_BLOCK

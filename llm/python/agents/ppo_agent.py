@@ -433,6 +433,10 @@ class PPOAgent:
             value: Estimated state value
             done: Whether episode is done
         """
+        # Debug logging (log every 100th transition to avoid spam)
+        if len(self.rollout_buffer) % 100 == 0:
+            logger.debug(f"Storing observation with {len(observation)} fields: {list(observation.keys())}")
+
         self.rollout_buffer.push(observation, action, log_prob, reward, value, done)
 
         # Track episode stats

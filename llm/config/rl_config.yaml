@@ -123,8 +123,8 @@ rewards:
   block_placed: 1
 
   # Exploration rewards
-  new_chunk: 5  # Increased from 1 to encourage exploration
-  new_biome: 20  # Increased from 10
+  new_chunk: 10  # Increased from 5 - exploration is CRITICAL for learning
+  new_biome: 50  # Increased from 20
   new_structure: 50
 
   # Time penalty (encourage efficiency)
@@ -132,6 +132,7 @@ rewards:
 
   # Episode rewards
   survival_bonus: 100
+  death_penalty: -50  # Reduced from -100 to -50 for early training
 
 # Observation Space
 observation_space:

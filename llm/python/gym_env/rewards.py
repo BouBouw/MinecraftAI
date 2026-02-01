@@ -139,16 +139,16 @@ class RewardSystem:
             action_type = action.get('action_type', 0)
             target_block = action.get('target_block', 0)
 
-        # Mining rewards - small reward per action (encourage action)
+        # Mining rewards - increased to make it the PRIMARY way to earn rewards
         if action_type in [17, 20, 21, 22, 23]:  # ATTACK, BREAK_BLOCK, DIG_*
-            reward += 2.0  # Increased from 1.0 to make mining more attractive
+            reward += 5.0  # Increased from 2.0 - mining is critical!
 
             # Big bonus for discovering new block type
             if isinstance(action, dict):
                 mined_block = target_block
                 if mined_block not in self.discovered_blocks:
                     self.discovered_blocks.add(mined_block)
-                    reward += 20.0  # Significant bonus for new discovery
+                    reward += 50.0  # Increased from 20.0 - HUGE discovery bonus
 
                 self.episode_mined_blocks[mined_block] += 1
 

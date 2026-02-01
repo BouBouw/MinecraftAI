@@ -480,7 +480,11 @@ app.get('/health', (req, res) => {
     });
 });
 
-app.listen(3000, () => {
-    console.log(`🌐 HTTP server listening on port 3000`);
-    console.log(`📊 Health check: http://localhost:3000/health\n`);
+// Use dynamic HTTP port based on WebSocket port (WS_PORT - 5000)
+// This allows multiple bridge servers to run simultaneously
+const HTTP_PORT = WS_PORT - 5000;
+
+app.listen(HTTP_PORT, () => {
+    console.log(`🌐 HTTP server listening on port ${HTTP_PORT}`);
+    console.log(`📊 Health check: http://localhost:${HTTP_PORT}/health\n`);
 });

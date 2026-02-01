@@ -13,8 +13,10 @@ from dataclasses import dataclass
 from collections import deque
 import time
 
-from ..utils.config import get_config
-from ..utils.logger import get_logger
+from utils.config import get_config
+from utils.logger import get_logger
+from gym_env.observations import create_observation_space
+from gym_env.actions import create_action_space
 
 logger = get_logger(__name__)
 
@@ -302,6 +304,13 @@ class MinecraftEnvironment:
         """
         self.bridge = MinecraftBotBridge(bridge_host, bridge_port)
 
+        # Get config for spaces
+        config = get_config()
+
+        # Create observation and action spaces
+        self.observation_space = create_observation_space(config)
+        self.action_space = create_action_space(config)
+
         # Action mapping
         self.action_names = {
             0: 'NOOP',
@@ -356,6 +365,30 @@ class MinecraftEnvironment:
             49: 'MOVE_FORWARD_2',
             50: 'MOVE_BACKWARD_2',
         }
+
+    @classmethod
+    async def create(cls, host: str = 'localhost', port: int = 8765):
+        """
+        Create and connect a Minecraft environment asynchronously
+
+        Args:
+            host: Bridge server host
+            port: Bridge port
+
+        Returns:
+            Connected MinecraftEnvironment instance
+        """
+        logger.info(f"🌉 Creating Minecraft environment connected to {host}:{port}...")
+
+        # Create instance
+        env = cls(bridge_host=host, bridge_port=port)
+
+        # Connect to the bridge
+        await env.bridge.connect()
+
+        logger.info("✅ Minecraft environment connected and ready!")
+
+        return env
 
     async def reset(self) -> Tuple[Dict[str, Any], Dict[str, Any]]:
         """

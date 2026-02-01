@@ -64,6 +64,10 @@ class MinecraftBotBridge:
         self.current_state: Optional[BotState] = None
         self.last_action_time = 0
 
+        # Action completion tracking
+        self._action_complete_event = asyncio.Event()
+        self._last_action_result = None
+
         # Action callbacks
         self.action_callbacks = {
             'move_forward': None,

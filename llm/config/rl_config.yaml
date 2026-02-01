@@ -69,6 +69,33 @@ training:
   # Most rewards come from intrinsic motivation, not hand-crafted rewards
   use_extrinsic_rewards: false  # Disable hand-crafted rewards, use intrinsic only
 
+  # HINDSIGHT EXPERIENCE REPLAY (HER): Learn from failed episodes
+  # Replays "failed" experiences with achieved goals - turns failures into learning!
+  her:
+    enabled: true  # Enable HER for 3-5x faster learning
+    replay_ratio: 4  # For each real transition, create 4 HER samples
+    replay_strategy: future  # How to select alternative goals (future, final, random)
+    buffer_size: 100000  # HER replay buffer capacity
+
+  # PRIORITIZED EXPERIENCE REPLAY (PER): Learn from important experiences
+  # Prioritize transitions with high TD-error (surprising mistakes)
+  priority_replay:
+    enabled: true  # Enable PER for 2-3x faster learning
+    buffer_size: 100000  # PER buffer capacity
+    alpha: 0.6  # Prioritization exponent (0 = uniform, 1 = full)
+    beta: 0.4  # Importance sampling correction (annealed to 1.0)
+    beta_increment: 0.001  # Beta annealing rate
+
+  # REWARD NORMALIZATION: Stabilize training
+  # Normalize and clip rewards to prevent extreme values
+  reward_normalization:
+    enabled: true  # Enable reward normalization
+    reward_clip_range: 10.0  # Clip rewards to [-10, 10]
+    return_clip_range: 20.0  # Clip returns to [-20, 20]
+    normalize_rewards: true  # Use running statistics
+    reward_window_size: 1000  # Window for reward statistics
+    return_window_size: 100  # Window for return statistics
+
   # Training parameters
   total_timesteps: 50000000  # 50M steps for full autonomous learning
   batch_size: 256  # Larger batch for more stable learning

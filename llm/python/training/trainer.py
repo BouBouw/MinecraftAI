@@ -16,6 +16,9 @@ from memory.memory_manager import MemoryManager, get_database_manager
 from crafting.craft_discovery import CraftDiscoverySystem
 from training.curriculum import Curriculum, RewardShaper, create_curriculum
 from training.auto_curriculum import AutoCurriculum, create_auto_curriculum
+from training.hindsight_experience_replay import HindsightExperienceReplay, create_her
+from training.priority_experience_replay import PrioritizedExperienceReplay, create_priority_replay
+from training.reward_normalization import RewardNormalizationSystem, create_reward_normalization
 from gym_env.minecraft_env import MinecraftEnv, create_minecraft_env
 from gym_env.parallel_env import ParallelMinecraftEnv, create_parallel_env
 from bridge.minecraft_bot_bridge import MinecraftBotBridge
@@ -45,7 +48,10 @@ class Trainer:
         memory: MemoryManager = None,
         curriculum: Curriculum = None,
         curiosity_module: IntrinsicCuriosityModule = None,
-        auto_curriculum: AutoCurriculum = None
+        auto_curriculum: AutoCurriculum = None,
+        her_module: HindsightExperienceReplay = None,
+        per_module: PrioritizedExperienceReplay = None,
+        reward_normalization_system: RewardNormalizationSystem = None
     ):
         """
         Initialize trainer
@@ -58,6 +64,9 @@ class Trainer:
             curriculum: Curriculum (fixed or auto)
             curiosity_module: Intrinsic curiosity module for autonomous learning
             auto_curriculum: Auto-curriculum for self-directed learning
+            her_module: Hindsight Experience Replay module
+            per_module: Prioritized Experience Replay module
+            reward_normalization_system: Reward normalization and clipping system
         """
         self.config = config or get_config()
         self.training_config = self.config.get('training', {})
@@ -94,6 +103,15 @@ class Trainer:
 
         # Curiosity module for intrinsic rewards
         self.curiosity_module = curiosity_module
+
+        # Hindsight Experience Replay for learning from failures
+        self.her_module = her_module
+
+        # Prioritized Experience Replay for learning from important mistakes
+        self.per_module = per_module
+
+        # Reward normalization system for stable training
+        self.reward_normalization_system = reward_normalization_system
 
         # Craft discovery
         self.craft_discovery = CraftDiscoverySystem(self.memory)
@@ -307,6 +325,29 @@ class Trainer:
                 done=done or truncated
             )
 
+            # Store in HER buffer for learning from failures
+            if self.her_module:
+                self.her_module.store_transition(
+                    observation=obs,
+                    action=action,
+                    reward=shaped_reward,
+                    next_observation=next_obs,
+                    done=done or truncated
+                )
+
+            # Store in PER buffer for prioritized learning
+            if self.per_module:
+                # We'll compute TD-error later during update
+                # For now, store without priority (will use max)
+                self.per_module.store_transition(
+                    observation=obs,
+                    action=action,
+                    reward=shaped_reward,
+                    next_observation=next_obs,
+                    done=done or truncated,
+                    td_error=None  # Will be computed during update
+                )
+
             # Store in memory (if memory manager supports it)
             if self.memory and hasattr(self.memory, 'remember_transition'):
                 self.memory.remember_transition(obs, action, shaped_reward, done or truncated, next_obs)
@@ -501,6 +542,27 @@ class Trainer:
                 value=value,
                 done=done
             )
+
+            # Store in HER buffer for learning from failures
+            if self.her_module:
+                self.her_module.store_transition(
+                    observation=obs,
+                    action=action,
+                    reward=shaped_reward,
+                    next_observation=next_obs,
+                    done=done
+                )
+
+            # Store in PER buffer for prioritized learning
+            if self.per_module:
+                self.per_module.store_transition(
+                    observation=obs,
+                    action=action,
+                    reward=shaped_reward,
+                    next_observation=next_obs,
+                    done=done,
+                    td_error=None
+                )
 
             # Collect for ICM update
             if self.curiosity_enabled:
@@ -770,6 +832,25 @@ def create_trainer(
         device = 'cuda' if torch.cuda.is_available() else 'cpu'
         curiosity_module = create_curiosity_module(config, device)
 
+    # Create Hindsight Experience Replay module if enabled
+    her_module = None
+    her_config = training_config.get('her', {})
+    her_enabled = her_config.get('enabled', False)
+    if her_enabled:
+        logger.info("🔄 Creating HINDSIGHT EXPERIENCE REPLAY module")
+        her_module = create_her(config)
+
+    # Create Prioritized Experience Replay module if enabled
+    per_module = None
+    per_config = training_config.get('priority_replay', {})
+    per_enabled = per_config.get('enabled', False)
+    if per_enabled:
+        logger.info("🎯 Creating PRIORITIZED EXPERIENCE REPLAY module")
+        per_module = create_priority_replay(config)
+
+    # Create Reward Normalization System
+    reward_normalization_system = create_reward_normalization(config)
+
     # Create agent WITH curriculum (fixed or auto) for action masking
     effective_curriculum = auto_curriculum if auto_curriculum_enabled else curriculum
     agent = create_ppo_agent(config=config, curriculum=effective_curriculum)
@@ -786,7 +867,10 @@ def create_trainer(
         agent=agent,
         curriculum=curriculum,
         curiosity_module=curiosity_module,
-        auto_curriculum=auto_curriculum
+        auto_curriculum=auto_curriculum,
+        her_module=her_module,
+        per_module=per_module,
+        reward_normalization_system=reward_normalization_system
     )
 
 

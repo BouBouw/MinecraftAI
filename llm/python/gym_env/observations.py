@@ -243,6 +243,11 @@ class ObservationSpace:
                 armor.get('feet', 0)
             ], dtype=np.int32)
 
+        # Debug logging
+        from utils.logger import get_logger
+        logger = get_logger(__name__)
+        logger.info(f"Created observation with {len(obs)} fields: {list(obs.keys())}")
+
         return obs
 
     def flatten_observation(self, obs: Dict[str, Any]) -> np.ndarray:

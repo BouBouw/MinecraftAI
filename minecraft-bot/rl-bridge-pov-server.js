@@ -78,7 +78,7 @@ bot.on('end', () => {
 });
 
 // Start POV capture with screenshots
-function startPOVCapture() {
+async function startPOVCapture() {
     console.log('🎬 Starting POV capture...\n');
 
     // Try to load prismarine-viewer

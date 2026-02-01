@@ -42,7 +42,8 @@
       "Bash(do echo:*)",
       "Bash(done)",
       "Bash(do python:*)",
-      "Bash(echo:*)"
+      "Bash(echo:*)",
+      "Bash(grep:*)"
     ]
   }
 }

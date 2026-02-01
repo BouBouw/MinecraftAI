@@ -32,7 +32,11 @@
       "Bash(javap:*)",
       "Bash(Select-Object -Last 50)",
       "Bash(chmod:*)",
-      "Bash(ssh:*)"
+      "Bash(ssh:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(python3:*)"
     ]
   }
 }

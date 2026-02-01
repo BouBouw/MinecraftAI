@@ -203,8 +203,11 @@ async function executeAction(action) {
             console.log(`Unknown action type: ${actionType}`);
     }
 
-    // Wait for action to complete
-    await new Promise(resolve => setTimeout(resolve, 100));
+    // Wait for action to complete (only for non-mining actions)
+    // Mining actions (12, 17) already wait via bot.dig()
+    if (actionType !== 12 && actionType !== 17) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+    }
 }
 
 function startObservationLoop() {

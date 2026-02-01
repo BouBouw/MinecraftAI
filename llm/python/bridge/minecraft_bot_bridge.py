@@ -33,7 +33,7 @@ class BotState:
     in_water: int  # 0 or 1
     inventory: List[List[int]]  # [[item_id, count], ...]
     held_item: int
-    armor: Dict[str, int]
+    armor: List[int]  # [head, chest, legs, feet]
     nearby_entities: List[Dict[str, Any]]
     time_of_day: int
     is_raining: int  # 0 or 1
@@ -152,7 +152,7 @@ class MinecraftBotBridge:
             in_water=obs_data.get('in_water', 0),
             inventory=obs_data['inventory'],
             held_item=obs_data.get('hotbar_selected', 0),
-            armor=obs_data.get('armor', {}),
+            armor=obs_data.get('armor', [0, 0, 0, 0]),
             nearby_entities=obs_data.get('nearby_entities', []),
             time_of_day=obs_data.get('time_of_day', 0),
             is_raining=obs_data.get('is_raining', 0),
@@ -303,7 +303,7 @@ class MinecraftBotBridge:
             'in_water': 0,
             'inventory': [],
             'held_item': 0,
-            'armor': {},
+            'armor': [0, 0, 0, 0],
             'nearby_entities': [],
             'time_of_day': 0,
             'is_raining': 0,

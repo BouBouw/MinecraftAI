@@ -186,7 +186,18 @@ class ObservationSpace:
         Returns:
             Formatted observation matching the observation space
         """
+        from utils.logger import get_logger
+        logger = get_logger(__name__)
+
         obs = {}
+
+        # Debug: Check what self.space actually is
+        logger.info(f"create_observation: self.space type = {type(self.space)}")
+        logger.info(f"create_observation: 'position' in self.space = {'position' in self.space}")
+        if hasattr(self.space, 'spaces'):
+            logger.info(f"create_observation: self.space.spaces type = {type(self.space.spaces)}")
+            logger.info(f"create_observation: 'position' in self.space.spaces = {'position' in self.space.spaces}")
+            logger.info(f"create_observation: self.space.spaces keys = {list(self.space.spaces.keys())}")
 
         # Position and movement
         if 'position' in self.space:
@@ -196,6 +207,7 @@ class ObservationSpace:
                 pos.get('y', 0),
                 pos.get('z', 0)
             ], dtype=np.float32)
+            logger.info("create_observation: Added position field")
 
         if 'rotation' in self.space:
             rot = raw_state.get('rotation', {})

@@ -342,12 +342,20 @@ class PPOAgent:
                     for key in obs_tensors_list[0].keys():
                         stacked_obs[key] = torch.cat([obs[key] for obs in obs_tensors_list], dim=0)
                     logger.info(f"  Stacked obs: keys={list(stacked_obs.keys())}, len={len(stacked_obs)}")
+
+                    # Check if stacked_obs is empty (environment returned empty observations)
+                    if len(stacked_obs) == 0:
+                        logger.error("Environment returned empty observations! Cannot train without observation data.")
+                        logger.error(f"First observation was: {batch_obs[0] if len(batch_obs) > 0 else 'N/A'}")
+                        return {}
                 else:
                     logger.warning("obs_tensors_list is empty, cannot stack")
                     continue
 
                 # Verify stacked_obs batch size matches batch_actions
-                if len(obs_tensors_list) > 0 and len(stacked_obs) > 0:
+                if len(stacked_obs) == 0:
+                    logger.error("stacked_obs is empty, skipping PPO update")
+                    return {}
                     first_key = list(stacked_obs.keys())[0]
                     stacked_batch_size = stacked_obs[first_key].size(0)
                     action_batch_size = len(batch_actions)

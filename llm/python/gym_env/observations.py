@@ -210,9 +210,17 @@ class ObservationSpace:
             inventory = raw_state.get('inventory', [])
             inv_array = np.zeros((36, 2), dtype=np.int32)
 
-            for i, slot in enumerate(inventory[:36]):
-                if slot:
-                    inv_array[i] = [slot.get('item_id', 0), slot.get('count', 0)]
+            # Handle both flat list format [item_id, count, item_id, count, ...]
+            # and object list format [{item_id, count}, {item_id, count}, ...]
+            if len(inventory) > 0 and isinstance(inventory[0], (int, float)):
+                # Flat list format: [item_id, count, item_id, count, ...]
+                for i in range(min(36, len(inventory) // 2)):
+                    inv_array[i] = [inventory[i*2], inventory[i*2 + 1]]
+            else:
+                # Object list format
+                for i, slot in enumerate(inventory[:36]):
+                    if slot:
+                        inv_array[i] = [slot.get('item_id', 0), slot.get('count', 0)]
 
             obs['inventory'] = inv_array
 
@@ -226,12 +234,17 @@ class ObservationSpace:
             blocks_array = np.zeros((count, 4), dtype=np.int32)
 
             for i, block in enumerate(blocks[:count]):
-                blocks_array[i] = [
-                    block.get('x', 0),
-                    block.get('y', 0),
-                    block.get('z', 0),
-                    block.get('block_id', 0)
-                ]
+                if isinstance(block, (list, np.ndarray)):
+                    # Handle list format [x, y, z, block_id]
+                    blocks_array[i] = block[:4]
+                elif isinstance(block, dict):
+                    # Handle dict format {x, y, z, block_id}
+                    blocks_array[i] = [
+                        block.get('x', 0),
+                        block.get('y', 0),
+                        block.get('z', 0),
+                        block.get('block_id', 0)
+                    ]
 
             obs['visible_blocks'] = blocks_array
 
@@ -242,12 +255,17 @@ class ObservationSpace:
             entities_array = np.zeros((count, 4), dtype=np.int32)
 
             for i, entity in enumerate(entities[:count]):
-                entities_array[i] = [
-                    entity.get('type', 0),
-                    entity.get('x', 0),
-                    entity.get('y', 0),
-                    entity.get('z', 0)
-                ]
+                if isinstance(entity, (list, np.ndarray)):
+                    # Handle list format [type, x, y, z]
+                    entities_array[i] = entity[:4]
+                elif isinstance(entity, dict):
+                    # Handle dict format {type, x, y, z}
+                    entities_array[i] = [
+                        entity.get('type', 0),
+                        entity.get('x', 0),
+                        entity.get('y', 0),
+                        entity.get('z', 0)
+                    ]
 
             obs['nearby_entities'] = entities_array
 
@@ -266,13 +284,17 @@ class ObservationSpace:
             obs['held_item'] = raw_state.get('held_item', 0)
 
         if 'armor' in self.space.spaces:
-            armor = raw_state.get('armor', {})
-            obs['armor'] = np.array([
-                armor.get('head', 0),
-                armor.get('chest', 0),
-                armor.get('legs', 0),
-                armor.get('feet', 0)
-            ], dtype=np.int32)
+            armor = raw_state.get('armor', [])
+            # Handle both list format [head, chest, legs, feet] and dict format
+            if isinstance(armor, list):
+                obs['armor'] = np.array(armor, dtype=np.int32)
+            else:
+                obs['armor'] = np.array([
+                    armor.get('head', 0),
+                    armor.get('chest', 0),
+                    armor.get('legs', 0),
+                    armor.get('feet', 0)
+                ], dtype=np.int32)
 
         # Debug logging (commented out to reduce log verbosity)
         # logger.info(f"Created observation with {len(obs)} fields: {list(obs.keys())}")

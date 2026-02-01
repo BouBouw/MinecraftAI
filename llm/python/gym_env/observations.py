@@ -62,7 +62,16 @@ class ObservationSpace:
         Returns:
             Dictionary observation space
         """
+        from utils.logger import get_logger
+        logger = get_logger(__name__)
+
         space_dict = {}
+
+        # Debug: Log what obs_config.get() returns for first few fields
+        logger.info(f"obs_config type: {type(self.obs_config)}")
+        logger.info(f"obs_config.get('position', True) = {self.obs_config.get('position', True)}")
+        logger.info(f"obs_config.get('rotation', True) = {self.obs_config.get('rotation', True)}")
+        logger.info(f"obs_config.get('health', True) = {self.obs_config.get('health', True)}")
 
         # Position and movement
         if self.obs_config.get('position', True):

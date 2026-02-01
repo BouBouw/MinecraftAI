@@ -30,11 +30,30 @@ class ObservationSpace:
         Args:
             config: Configuration dictionary
         """
+        from utils.logger import get_logger
+        logger = get_logger(__name__)
+
         self.config = config
+
+        # Debug: log type of config and its keys
+        logger.info(f"config type: {type(config)}")
+        logger.info(f"config keys: {list(config.keys()) if isinstance(config, dict) else 'not a dict'}")
+
+        # Check if config has observation_space section
+        if isinstance(config, dict):
+            if 'observation_space' in config:
+                logger.info(f"config has 'observation_space' key: {config['observation_space']}")
+            else:
+                logger.warning(f"config does NOT have 'observation_space' key. Available keys: {list(config.keys())}")
+
         self.obs_config = config.get('observation_space', {})
+
+        # Debug logging
+        logger.info(f"Initializing ObservationSpace with obs_config: {self.obs_config}")
 
         # Build observation space
         self.space = self._build_observation_space()
+        logger.info(f"Built observation space with {len(self.space.spaces)} fields: {list(self.space.spaces.keys())}")
 
     def _build_observation_space(self) -> spaces.Dict:
         """

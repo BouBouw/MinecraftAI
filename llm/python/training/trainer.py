@@ -175,7 +175,7 @@ class Trainer:
 
         # Start tracking in memory
         if self.memory:
-            episode_id = self.memory.start_episode(
+            episode_id = self.memory.create_episode(
                 self.curriculum.current_stage_idx
             )
         else:

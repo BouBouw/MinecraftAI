@@ -82,12 +82,12 @@ class RolloutBuffer:
         returns = []
         advantages = []
 
-        last_value = 0
-        last_advantage = 0
+        last_value = 0.0  # Use float to avoid dtype issues
+        last_advantage = 0.0  # Use float to avoid dtype issues
 
         for t in reversed(range(len(self.rewards))):
             if t == len(self.rewards) - 1:
-                next_value = 0
+                next_value = 0.0  # Use float
                 next_non_terminal = 1.0 - self.dones[t]
             else:
                 next_value = self.values[t + 1]
@@ -279,14 +279,15 @@ class PPOAgent:
         for key, value in observation.items():
             if isinstance(value, np.ndarray):
                 # Flatten multi-dimensional arrays before adding batch dimension
-                flat_value = value.flatten()
+                # CRITICAL: Convert to float32 to avoid dtype errors
+                flat_value = value.flatten().astype(np.float32)
                 tensors[key] = torch.FloatTensor(flat_value).unsqueeze(0).to(self.device)
             elif isinstance(value, (int, float)):
                 # Create 2D tensor [1, 1] for scalars
-                tensors[key] = torch.FloatTensor([[value]]).to(self.device)
+                tensors[key] = torch.FloatTensor([[float(value)]]).to(self.device)
             else:
                 # Create 2D tensor [1, features] for lists
-                flat_value = np.array(value).flatten()
+                flat_value = np.array(value, dtype=np.float32).flatten()
                 tensors[key] = torch.FloatTensor(flat_value).unsqueeze(0).to(self.device)
 
         return tensors
@@ -377,10 +378,10 @@ class PPOAgent:
 
         # Convert to tensors
         observations = self.rollout_buffer.observations
-        actions = torch.tensor(self.rollout_buffer.actions).to(self.device)
-        old_log_probs = torch.tensor(self.rollout_buffer.log_probs).to(self.device)
-        old_values = torch.tensor(self.rollout_buffer.values).to(self.device)
-        returns_tensor = torch.tensor(returns).to(self.device)
+        actions = torch.tensor(self.rollout_buffer.actions, dtype=torch.long).to(self.device)
+        old_log_probs = torch.tensor(self.rollout_buffer.log_probs, dtype=torch.float32).to(self.device)
+        old_values = torch.tensor(self.rollout_buffer.values, dtype=torch.float32).to(self.device)
+        returns_tensor = torch.tensor(returns, dtype=torch.float32).to(self.device)
 
         # Normalize advantages
         advantages = returns_tensor - old_values

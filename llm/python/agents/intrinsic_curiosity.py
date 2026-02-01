@@ -314,8 +314,8 @@ class IntrinsicCuriosityModule:
         """
         with torch.no_grad():
             # Convert to tensors
-            obs_tensor = self._obs_to_tensor(observation)
-            next_obs_tensor = self._obs_to_tensor(next_observation)
+            obs_tensor = self._obs_to_tensor(observation).float()
+            next_obs_tensor = self._obs_to_tensor(next_observation).float()
             action_tensor = F.one_hot(torch.tensor(action), 50).float().to(self.device).unsqueeze(0)
 
             # 1. Curiosity bonus (ICM) - forward model prediction error
@@ -376,8 +376,8 @@ class IntrinsicCuriosityModule:
             Loss metrics
         """
         # Convert to tensors
-        obs_tensors = torch.stack([self._obs_to_tensor(obs) for obs in observations]).to(self.device)
-        next_obs_tensors = torch.stack([self._obs_to_tensor(obs) for obs in next_observations]).to(self.device)
+        obs_tensors = torch.stack([self._obs_to_tensor(obs) for obs in observations]).to(self.device).float()
+        next_obs_tensors = torch.stack([self._obs_to_tensor(obs) for obs in next_observations]).to(self.device).float()
         action_tensors = F.one_hot(torch.tensor(actions), 50).float().to(self.device)
 
         # Train ICM
@@ -430,18 +430,19 @@ class IntrinsicCuriosityModule:
 
         for key, value in observation.items():
             if isinstance(value, np.ndarray):
-                flat_obs.extend(value.flatten())
+                # Convert to float32 to avoid dtype issues
+                flat_obs.extend(value.flatten().astype(np.float32))
             elif isinstance(value, list):
-                flat_obs.extend(value)
+                flat_obs.extend([float(v) for v in value])
             elif isinstance(value, (int, float)):
-                flat_obs.append(value)
+                flat_obs.append(float(value))
             else:
                 # Skip complex objects
                 pass
 
         # Pad or truncate to 1000
         if len(flat_obs) < 1000:
-            flat_obs.extend([0] * (1000 - len(flat_obs)))
+            flat_obs.extend([0.0] * (1000 - len(flat_obs)))
         else:
             flat_obs = flat_obs[:1000]
 

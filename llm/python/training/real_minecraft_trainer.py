@@ -117,8 +117,9 @@ class RealMinecraftTrainer:
 
             # Episode loop
             while not done and steps < total_timesteps:
-                # Get action from agent
-                action = self.agent.select_action(observation)
+                # Get action from agent (returns tuple: action, log_prob, value)
+                action_data = self.agent.select_action(observation)
+                action = action_data[0] if isinstance(action_data, tuple) else action_data
 
                 # Execute action in real Minecraft
                 observation, reward, done, truncated, info = await self.env.step(action)

@@ -217,7 +217,7 @@ class PPOAgent:
             observation: Observation dictionary
 
         Returns:
-            Dictionary of tensors
+            Dictionary of tensors with shape [1, features]
         """
         tensors = {}
 
@@ -225,8 +225,10 @@ class PPOAgent:
             if isinstance(value, np.ndarray):
                 tensors[key] = torch.FloatTensor(value).unsqueeze(0).to(self.device)
             elif isinstance(value, (int, float)):
-                tensors[key] = torch.FloatTensor([value]).to(self.device)
+                # Create 2D tensor [1, 1] for scalars
+                tensors[key] = torch.FloatTensor([[value]]).to(self.device)
             else:
+                # Create 2D tensor [1, features] for lists
                 tensors[key] = torch.FloatTensor(value).unsqueeze(0).to(self.device)
 
         return tensors

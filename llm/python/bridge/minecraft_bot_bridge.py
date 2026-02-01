@@ -94,14 +94,15 @@ class MinecraftBotBridge:
             logger.info("✅ Connected to Minecraft bot via WebSocket")
             self.connected = True
 
-            # Start listening for messages
-            await self.listen()
+            # Start listening for messages in background
+            # This won't block - it creates a background task
+            asyncio.create_task(self._listen_loop())
 
         except Exception as e:
             logger.error(f"❌ Failed to connect: {e}")
             raise
 
-    async def listen(self):
+    async def _listen_loop(self):
         """Listen for messages from the bot"""
         try:
             async for message in self.ws:

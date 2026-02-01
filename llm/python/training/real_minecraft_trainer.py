@@ -76,9 +76,9 @@ class RealMinecraftTrainer:
             # Initialize agent
             logger.info("🤖 Initializing PPO agent...")
             self.agent = PPOAgent(
-                observation_space=self.env.observation_space,
-                action_space=self.env.action_space,
-                config=self.config.get('agent', {})
+                config=self.config,
+                memory_manager=self.memory,
+                device='cpu'  # Use CUDA if available
             )
             logger.info("✅ Agent ready!")
 

@@ -401,7 +401,7 @@ class PPOAgent:
 
                 total_policy_loss += policy_loss.item()
                 total_value_loss += value_loss.item()
-                total_entropy += entropy.item()
+                total_entropy += entropy.mean().item()
                 updates += 1
 
         # Clear buffer

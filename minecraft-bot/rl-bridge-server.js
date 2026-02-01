@@ -168,8 +168,31 @@ async function executeAction(action) {
             bot.look(bot.entity.yaw, bot.entity.pitch - 0.2);
             await new Promise(resolve => setTimeout(resolve, 100));
             break;
-        case 12: // ATTACK
-            await bot.attack();
+        case 12: // ATTACK (mine blocks)
+            // Attack only swings arm, doesn't break blocks
+            // For mining, we need to use bot.dig() on the block in front
+            try {
+                // Get block in front of bot
+                const pos = bot.entity.position;
+                const yaw = bot.entity.yaw;
+
+                // Calculate block position in front of bot (1 block away)
+                const dx = -Math.sin(yaw) * 1;
+                const dz = Math.cos(yaw) * 1;
+                const targetBlock = bot.blockAt(pos.offset(dx, 0, dz));
+
+                if (targetBlock) {
+                    await bot.dig(targetBlock);
+                    console.log(`⛏️ Mined block at ${targetBlock.position}`);
+                } else {
+                    // No block, just attack (swing arm)
+                    await bot.attack();
+                }
+            } catch (err) {
+                // Fallback to attack if dig fails
+                console.log(`Attack fallback: ${err.message}`);
+                await bot.attack();
+            }
             break;
         default:
             console.log(`Unknown action type: ${actionType}`);

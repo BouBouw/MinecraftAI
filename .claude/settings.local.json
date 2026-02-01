@@ -43,7 +43,8 @@
       "Bash(done)",
       "Bash(do python:*)",
       "Bash(echo:*)",
-      "Bash(grep:*)"
+      "Bash(grep:*)",
+      "Bash(find:*)"
     ]
   }
 }

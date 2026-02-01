@@ -1,11 +1,19 @@
 """
 Reward system for Minecraft RL environment.
 Calculates rewards based on actions and state changes.
+
+SUPPORTS TWO MODES:
+1. Extrinsic rewards (hand-crafted) - Traditional RL with human-designed rewards
+2. Intrinsic rewards (autonomous) - Self-motivated exploration via curiosity
 """
 
 import numpy as np
-from typing import Dict, Any, List, Set
+from typing import Dict, Any, List, Set, Optional
 from collections import defaultdict
+
+from utils.logger import get_logger
+
+logger = get_logger(__name__)
 
 
 class RewardSystem:
@@ -20,15 +28,30 @@ class RewardSystem:
     - Achievements (first-time discoveries)
     """
 
-    def __init__(self, config: Dict[str, Any]):
+    def __init__(
+        self,
+        config: Dict[str, Any],
+        curiosity_module: Optional['IntrinsicCuriosityModule'] = None,
+        auto_curriculum: Optional['AutoCurriculum'] = None
+    ):
         """
         Initialize reward system
 
         Args:
             config: Configuration dictionary
+            curiosity_module: Optional intrinsic curiosity module for autonomous learning
+            auto_curriculum: Optional auto-curriculum for tracking discoveries
         """
         self.config = config
         self.reward_config = config.get('rewards', {})
+
+        # Check if using intrinsic rewards (autonomous mode)
+        training_config = config.get('training', {})
+        self.use_intrinsic = training_config.get('auto_curriculum', {}).get('enabled', False)
+        self.use_extrinsic = training_config.get('use_extrinsic_rewards', True)
+
+        self.curiosity_module = curiosity_module
+        self.auto_curriculum = auto_curriculum
 
         # Tracking for first-time bonuses
         self.discovered_blocks: Set[int] = set()
@@ -45,6 +68,15 @@ class RewardSystem:
         self.last_position = None
         self.total_distance = 0.0
 
+        # Track last observation for intrinsic reward
+        self.last_observation: Optional[Dict[str, Any]] = None
+        self.last_action: Optional[int] = None
+
+        if self.use_intrinsic:
+            logger.info("🤖 Reward System: INTRINSIC MODE (autonomous learning)")
+        else:
+            logger.info("🎯 Reward System: EXTRINSIC MODE (hand-crafted rewards)")
+
     def reset(self):
         """Reset episode-specific tracking"""
         self.episode_mined_blocks.clear()
@@ -56,16 +88,19 @@ class RewardSystem:
     def calculate_reward(
         self,
         state: Dict[str, Any],
-        action: Dict[str, Any],
+        action: Any,
         next_state: Dict[str, Any],
         done: bool
     ) -> float:
         """
         Calculate reward for a single step
 
+        INTRINSIC MODE: Uses curiosity, novelty, count-based exploration
+        EXTRINSIC MODE: Uses hand-crafted rewards for specific actions
+
         Args:
             state: Current state
-            action: Action taken
+            action: Action taken (int or dict)
             next_state: Next state
             done: Whether episode is done
 
@@ -74,27 +109,88 @@ class RewardSystem:
         """
         reward = 0.0
 
-        # 1. Survival rewards
-        reward += self._survival_reward(state, next_state)
+        # Get action_type if action is a dict
+        if isinstance(action, dict):
+            action_type = action.get('action_type', 0)
+            action_id = action_type
+        else:
+            action_type = action
+            action_id = action
 
-        # 2. Progression rewards
-        reward += self._progression_reward(state, action, next_state)
+        # === INTRINSIC REWARDS (Autonomous Learning) ===
+        if self.use_intrinsic and self.curiosity_module:
+            # Curiosity-driven reward based on prediction error
+            intrinsic_reward = self.curiosity_module.compute_intrinsic_reward(
+                state, next_state, action_id
+            )
+            reward += intrinsic_reward
 
-        # 3. Exploration rewards
-        reward += self._exploration_reward(state, next_state)
+        # === EXTRINSIC REWARDS (Hand-crafted) ===
+        if self.use_extrinsic:
+            # 1. Survival rewards (minimal penalties only)
+            reward += self._survival_reward(state, next_state)
 
-        # 4. Achievement rewards (first-time bonuses)
-        reward += self._achievement_reward(state, action, next_state)
+            # 2. Progression rewards (action-based)
+            reward += self._progression_reward(state, action, next_state)
 
-        # 5. Time penalty (encourage efficiency)
-        # Small penalty per step to encourage efficient behavior
-        reward += self.reward_config.get('time_penalty', -0.1)
+            # 3. Exploration rewards (movement)
+            reward += self._exploration_reward(state, next_state)
 
-        # 6. Episode completion reward
+            # 4. Achievement rewards (first-time bonuses)
+            reward += self._achievement_reward(state, action, next_state)
+
+            # 5. Time penalty (small efficiency penalty)
+            reward += self.reward_config.get('time_penalty', -0.01)  # Reduced from -0.1
+
+        # === AUTO-CURRICULUM TRACKING ===
+        if self.auto_curriculum:
+            # Update mechanic tracking based on action
+            self._update_auto_curriculum(action, next_state, done)
+
+        # === EPISODE COMPLETION ===
         if done:
             reward += self._episode_completion_reward(next_state)
 
+        # Store for next intrinsic reward calculation
+        self.last_observation = next_state
+        self.last_action = action_id
+
         return reward
+
+    def _update_auto_curriculum(self, action: Any, next_state: Dict[str, Any], done: bool):
+        """Update auto-curriculum tracking based on action results"""
+        if not self.auto_curriculum:
+            return
+
+        # Get action type
+        if isinstance(action, dict):
+            action_type = action.get('action_type', 0)
+        else:
+            action_type = action
+
+        # Track block discoveries
+        if 'block_in_front' in next_state:
+            block_id = next_state['block_in_front']
+            if block_id not in self.discovered_blocks and block_id != 0:
+                self.discovered_blocks.add(block_id)
+                # Auto-curriculum will track this
+
+        # Track movement
+        pos = next_state.get('position', [0, 64, 0])
+        if isinstance(pos, list):
+            x, y, z = pos[0], pos[1], pos[2]
+        else:
+            x, y, z = pos.get('x', 0), pos.get('y', 64), pos.get('z', 0)
+
+        if self.last_position is not None:
+            last_x, last_y, last_z = self.last_position
+            distance = ((x - last_x)**2 + (z - last_z)**2)**0.5
+            self.total_distance += distance
+
+        self.last_position = (x, y, z)
+
+        # Update curriculum
+        self.auto_curriculum.update(step=getattr(self, 'step', 0))
 
     def _survival_reward(self, state: Dict[str, Any], next_state: Dict[str, Any]) -> float:
         """

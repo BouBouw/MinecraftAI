@@ -11,9 +11,11 @@ import time
 from datetime import datetime
 
 from agents.ppo_agent import PPOAgent, create_ppo_agent
+from agents.intrinsic_curiosity import IntrinsicCuriosityModule, create_curiosity_module
 from memory.memory_manager import MemoryManager, get_database_manager
 from crafting.craft_discovery import CraftDiscoverySystem
 from training.curriculum import Curriculum, RewardShaper, create_curriculum
+from training.auto_curriculum import AutoCurriculum, create_auto_curriculum
 from gym_env.minecraft_env import MinecraftEnv, create_minecraft_env
 from bridge.minecraft_bot_bridge import MinecraftBotBridge
 from utils.config import get_config
@@ -40,7 +42,9 @@ class Trainer:
         env: MinecraftEnv = None,
         agent: PPOAgent = None,
         memory: MemoryManager = None,
-        curriculum: Curriculum = None
+        curriculum: Curriculum = None,
+        curiosity_module: IntrinsicCuriosityModule = None,
+        auto_curriculum: AutoCurriculum = None
     ):
         """
         Initialize trainer
@@ -50,22 +54,42 @@ class Trainer:
             env: Minecraft environment
             agent: PPO agent
             memory: Memory manager
-            curriculum: Curriculum
+            curriculum: Curriculum (fixed or auto)
+            curiosity_module: Intrinsic curiosity module for autonomous learning
+            auto_curriculum: Auto-curriculum for self-directed learning
         """
         self.config = config or get_config()
         self.training_config = self.config.get('training', {})
+
+        # Check if using auto-curriculum mode
+        self.auto_curriculum_enabled = self.training_config.get('auto_curriculum', {}).get('enabled', False)
+        self.curiosity_enabled = self.training_config.get('curiosity', {}).get('enabled', False)
+
+        logger.info(f"🎓 Auto-Curriculum: {'ENABLED' if self.auto_curriculum_enabled else 'DISABLED'}")
+        logger.info(f"🤖 Intrinsic Curiosity: {'ENABLED' if self.curiosity_enabled else 'DISABLED'}")
 
         # Initialize components
         self.env = env
         self.agent = agent
         self.memory = memory or get_database_manager()
-        self.curriculum = curriculum or create_curriculum(self.config)
+
+        # Curriculum (fixed or auto)
+        self.curriculum = curriculum
+        self.auto_curriculum = auto_curriculum
+
+        # If auto-curriculum enabled, use it instead of fixed curriculum
+        if self.auto_curriculum_enabled and self.auto_curriculum:
+            logger.info("🚀 Using AUTO-CURRICULUM - agent sets its own learning goals")
+        elif self.curriculum:
+            logger.info("📋 Using FIXED CURRICULUM - human-defined stages")
+            # Reward shaper only for fixed curriculum
+            self.reward_shaper = RewardShaper(self.curriculum)
+
+        # Curiosity module for intrinsic rewards
+        self.curiosity_module = curiosity_module
 
         # Craft discovery
         self.craft_discovery = CraftDiscoverySystem(self.memory)
-
-        # Reward shaper
-        self.reward_shaper = RewardShaper(self.curriculum)
 
         # Training state
         self.total_steps = 0
@@ -114,6 +138,7 @@ class Trainer:
             total_timesteps = self.training_config.get('total_timesteps', 10000000)
 
         logger.info(f"Starting training for {total_timesteps} timesteps")
+        logger.info(f"Mode: {'AUTO-CURRICULUM' if self.auto_curriculum_enabled else 'FIXED CURRICULUM'}")
 
         start_time = time.time()
         episode_num = 0
@@ -128,13 +153,18 @@ class Trainer:
             if episode_num % 10 == 0:
                 self._log_progress(episode_num, episode_stats)
 
-            # Check curriculum advancement
-            if self.curriculum.should_advance():
-                old_stage = self.curriculum.current_stage_idx
-                self.curriculum.advance_stage()
+                # Log mechanic mastery if using auto-curriculum
+                if self.auto_curriculum_enabled and self.auto_curriculum and episode_num % 100 == 0:
+                    logger.info(self.auto_curriculum.get_mechanic_report())
 
-                if old_stage != self.curriculum.current_stage_idx:
-                    logger.info(f"✨ Advanced to curriculum stage {self.curriculum.current_stage_idx}")
+            # Curriculum advancement (only for fixed curriculum)
+            if not self.auto_curriculum_enabled and self.curriculum:
+                if self.curriculum.should_advance():
+                    old_stage = self.curriculum.current_stage_idx
+                    self.curriculum.advance_stage()
+
+                    if old_stage != self.curriculum.current_stage_idx:
+                        logger.info(f"✨ Advanced to curriculum stage {self.curriculum.current_stage_idx}")
 
             # Save checkpoint
             if self.total_steps % self.save_freq == 0 and self.total_steps > 0:
@@ -152,12 +182,21 @@ class Trainer:
         # Final save
         self._save_checkpoint(episode_num, final=True)
 
+        # Get curriculum progress
+        if self.auto_curriculum_enabled and self.auto_curriculum:
+            curriculum_progress = self.auto_curriculum.get_progress_summary()
+            logger.info("\n" + self.auto_curriculum.get_mechanic_report())
+        elif self.curriculum:
+            curriculum_progress = self.curriculum.get_progress_summary()
+        else:
+            curriculum_progress = {}
+
         return {
             'total_episodes': episode_num,
             'total_steps': self.total_steps,
             'elapsed_time': elapsed_time,
             'final_stats': self.agent.get_statistics(),
-            'curriculum_progress': self.curriculum.get_progress_summary(),
+            'curriculum_progress': curriculum_progress,
         }
 
     def _train_episode(self, episode_num: int) -> Dict[str, Any]:
@@ -177,9 +216,13 @@ class Trainer:
 
         # Start tracking in memory
         if self.memory:
-            self.current_episode_id = self.memory.create_episode(
-                self.curriculum.current_stage_idx
-            )
+            stage_idx = 0
+            if self.auto_curriculum_enabled and self.auto_curriculum:
+                stage_idx = 0  # Auto-curriculum doesn't have fixed stages
+            elif self.curriculum:
+                stage_idx = self.curriculum.current_stage_idx
+
+            self.current_episode_id = self.memory.create_episode(stage_idx)
         else:
             self.current_episode_id = None
 
@@ -188,6 +231,11 @@ class Trainer:
         done = False
         truncated = False
 
+        # Collect transitions for ICM update
+        icm_observations = []
+        icm_next_observations = []
+        icm_actions = []
+
         while not (done or truncated):
             # Select action
             action, log_prob, value = self.agent.select_action(obs)
@@ -195,10 +243,16 @@ class Trainer:
             # Step environment
             next_obs, reward, done, truncated, info = self.env.step(action)
 
-            # Apply reward shaping
-            shaped_reward = self.reward_shaper.shape_reward(reward)
+            # Apply reward shaping (only for fixed curriculum)
+            if self.auto_curriculum_enabled:
+                # In intrinsic mode, reward is already computed by curiosity module
+                shaped_reward = reward
+            elif hasattr(self, 'reward_shaper'):
+                shaped_reward = self.reward_shaper.shape_reward(reward)
+            else:
+                shaped_reward = reward
 
-            # Store transition
+            # Store transition for PPO
             self.agent.store_transition(
                 observation=obs,
                 action=action,
@@ -213,7 +267,16 @@ class Trainer:
                 self.memory.remember_transition(obs, action, shaped_reward, done or truncated, next_obs)
 
             # Update curriculum progress
-            self.curriculum.update_progress(1, shaped_reward)
+            if self.auto_curriculum_enabled and self.auto_curriculum:
+                self.auto_curriculum.update(self.total_steps)
+            elif self.curriculum:
+                self.curriculum.update_progress(1, shaped_reward)
+
+            # Collect for ICM update
+            if self.curiosity_enabled:
+                icm_observations.append(obs)
+                icm_next_observations.append(next_obs)
+                icm_actions.append(action)
 
             episode_reward += shaped_reward
             episode_length += 1
@@ -224,6 +287,21 @@ class Trainer:
             # Update policy if buffer is full
             if len(self.agent.rollout_buffer) >= self.agent.n_steps:
                 update_stats = self.agent.update()
+
+                # Update curiosity module
+                if self.curiosity_enabled and self.curiosity_module and len(icm_observations) > 0:
+                    icm_stats = self.curiosity_module.update_icm(
+                        icm_observations,
+                        icm_next_observations,
+                        icm_actions
+                    )
+                    if update_stats:
+                        update_stats.update(icm_stats)
+
+                    # Clear ICM buffer
+                    icm_observations = []
+                    icm_next_observations = []
+                    icm_actions = []
 
                 if update_stats and self.writer:
                     self._log_tensorboard(update_stats)
@@ -245,20 +323,60 @@ class Trainer:
         # Get reward statistics to see what the bot actually accomplished
         reward_stats = self.env.reward_system.get_statistics()
 
-        stats = {
-            'episode': episode_num,
-            'reward': episode_reward,
-            'length': episode_length,
-            'curriculum_stage': self.curriculum.current_stage_idx,
-            # Actual accomplishments
-            'blocks_mined': reward_stats.get('blocks_mined', {}),
-            'items_crafted': reward_stats.get('items_crafted', {}),
-            'blocks_placed': reward_stats.get('blocks_placed', 0),
-            'distance_traveled': reward_stats.get('distance_traveled', 0.0),
-            'discovered_blocks': reward_stats.get('discovered_blocks', 0),
-            'discovered_biomes': reward_stats.get('discovered_biomes', 0),
-            'visited_chunks': reward_stats.get('visited_chunks', 0),
-        }
+        # Get curriculum stage
+        if self.auto_curriculum_enabled and self.auto_curriculum:
+            curriculum_stage = 0  # Auto-curriculum doesn't have fixed stages
+            # Add mechanic mastery info
+            stats = {
+                'episode': episode_num,
+                'reward': episode_reward,
+                'length': episode_length,
+                'curriculum_stage': curriculum_stage,
+                'auto_curriculum': True,
+                # Mechanic mastery
+                'mechanic_mastery': {
+                    name: mech.mastery
+                    for name, mech in self.auto_curriculum.mechanics.items()
+                    if mech.skill_level.value > 0  # Only include discovered mechanics
+                },
+                # Actual accomplishments
+                'blocks_mined': reward_stats.get('blocks_mined', {}),
+                'items_crafted': reward_stats.get('items_crafted', {}),
+                'blocks_placed': reward_stats.get('blocks_placed', 0),
+                'distance_traveled': reward_stats.get('distance_traveled', 0.0),
+                'discovered_blocks': reward_stats.get('discovered_blocks', 0),
+                'discovered_biomes': reward_stats.get('discovered_biomes', 0),
+                'visited_chunks': reward_stats.get('visited_chunks', 0),
+            }
+        elif self.curriculum:
+            curriculum_stage = self.curriculum.current_stage_idx
+            stats = {
+                'episode': episode_num,
+                'reward': episode_reward,
+                'length': episode_length,
+                'curriculum_stage': curriculum_stage,
+                'auto_curriculum': False,
+                # Actual accomplishments
+                'blocks_mined': reward_stats.get('blocks_mined', {}),
+                'items_crafted': reward_stats.get('items_crafted', {}),
+                'blocks_placed': reward_stats.get('blocks_placed', 0),
+                'distance_traveled': reward_stats.get('distance_traveled', 0.0),
+                'discovered_blocks': reward_stats.get('discovered_blocks', 0),
+                'discovered_biomes': reward_stats.get('discovered_biomes', 0),
+                'visited_chunks': reward_stats.get('visited_chunks', 0),
+            }
+        else:
+            # Fallback
+            stats = {
+                'episode': episode_num,
+                'reward': episode_reward,
+                'length': episode_length,
+                'curriculum_stage': 0,
+                'blocks_mined': {},
+                'items_crafted': {},
+                'blocks_placed': 0,
+                'distance_traveled': 0.0,
+            }
 
         # Enhanced logging with accomplishments
         log_episode_end(logger, self.current_episode_id or episode_num, stats)
@@ -280,18 +398,26 @@ class Trainer:
     def _log_progress(self, episode_num: int, episode_stats: Dict[str, Any]):
         """Log training progress"""
         agent_stats = self.agent.get_statistics()
-        curriculum_progress = self.curriculum.get_progress_summary()
 
-        # Get current stage object for better info
-        current_stage = self.curriculum.get_current_stage()
-        stage_name = current_stage.name if current_stage else 'unknown'
+        if self.auto_curriculum_enabled and self.auto_curriculum:
+            curriculum_progress = self.auto_curriculum.get_progress_summary()
+            stage_name = f"Auto ({curriculum_progress['discovered_mechanics']}/{curriculum_progress['total_mechanics']} mechanics)"
+            progress_pct = curriculum_progress['mastery_percentage']
+        elif self.curriculum:
+            curriculum_progress = self.curriculum.get_progress_summary()
+            current_stage = self.curriculum.get_current_stage()
+            stage_name = current_stage.name if current_stage else 'unknown'
+            progress_pct = curriculum_progress['progress_percentage']
+        else:
+            stage_name = 'N/A'
+            progress_pct = 0
 
         logger.info(
             f"📈 Episode {episode_num} | "
             f"Reward: {episode_stats['reward']:.1f} | "
             f"Length: {episode_stats['length']} | "
             f"Stage: {stage_name} | "
-            f"Progress: {curriculum_progress['progress_percentage']:.1f}%"
+            f"Progress: {progress_pct:.1f}%"
         )
 
     def _log_tensorboard(self, update_stats: Dict[str, float]):
@@ -442,21 +568,48 @@ def create_trainer(
     logger.info(f"Creating Minecraft bridge client: {bridge_host}:{bridge_port}")
     bridge = MinecraftBotBridge(host=bridge_host, port=bridge_port)
 
-    # Create curriculum first (needed by environment)
-    curriculum = create_curriculum(config)
+    # Check training mode
+    training_config = config.get('training', {})
+    auto_curriculum_enabled = training_config.get('auto_curriculum', {}).get('enabled', False)
+    curiosity_enabled = training_config.get('curiosity', {}).get('enabled', False)
 
-    # Create environment with bridge AND curriculum
+    # Create curriculum (fixed or auto)
+    if auto_curriculum_enabled:
+        logger.info("🚀 Creating AUTO-CURRICULUM for autonomous learning")
+        curriculum = None  # Not using fixed curriculum
+        auto_curriculum = create_auto_curriculum(config)
+    else:
+        logger.info("📋 Creating FIXED CURRICULUM")
+        curriculum = create_curriculum(config)
+        auto_curriculum = None
+
+    # Create environment with bridge and curriculum
     env = create_minecraft_env(config, curriculum=curriculum, bridge_client=bridge)
 
-    # Create agent WITH curriculum for action masking
-    agent = create_ppo_agent(config=config, curriculum=curriculum)
+    # Create curiosity module if enabled
+    curiosity_module = None
+    if curiosity_enabled:
+        logger.info("🤖 Creating INTRINSIC CURIOSITY MODULE")
+        device = 'cuda' if torch.cuda.is_available() else 'cpu'
+        curiosity_module = create_curiosity_module(config, device)
+
+    # Create agent WITH curriculum (fixed or auto) for action masking
+    effective_curriculum = auto_curriculum if auto_curriculum_enabled else curriculum
+    agent = create_ppo_agent(config=config, curriculum=effective_curriculum)
+
+    # Update environment's reward system with curiosity and auto-curriculum
+    if hasattr(env, 'reward_system'):
+        env.reward_system.curiosity_module = curiosity_module
+        env.reward_system.auto_curriculum = auto_curriculum
 
     # Create trainer with all components
     return Trainer(
         config=config,
         env=env,
         agent=agent,
-        curriculum=curriculum  # Pass curriculum to trainer as well
+        curriculum=curriculum,
+        curiosity_module=curiosity_module,
+        auto_curriculum=auto_curriculum
     )
 
 

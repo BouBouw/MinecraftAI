@@ -31,44 +31,45 @@ agent:
 
 # Training Configuration
 training:
-  # Curriculum learning
-  curriculum:
+  # AUTO-CURRICULUM: Agent discovers and learns ALL mechanics autonomously
+  # No human-specified stages - agent sets its own learning goals
+  auto_curriculum:
+    enabled: true  # Use auto-curriculum instead of fixed stages
+    # The agent will:
+    # - Discover mechanics through exploration
+    # - Track mastery level for each mechanic
+    # - Set learning goals based on prerequisites
+    # - Learn movement, mining, crafting, building, combat, survival automatically
+
+  # INTRINSIC CURIOSITY: Self-motivated exploration
+  # Agent is intrinsically motivated to explore and discover, no external rewards needed
+  curiosity:
     enabled: true
-    stages:
-      - name: basic_movement
-        steps: 10000
-        actions: [MOVE, JUMP, LOOK]
-        reward_scale: 1.0
 
-      - name: gathering
-        steps: 50000
-        actions: [MOVE, JUMP, LOOK, DIG, ATTACK]
-        reward_scale: 2.0
+    # Intrinsic Curiosity Module (ICM)
+    icm_scale: 1.0  # Weight for curiosity reward
+    icm_lr: 0.001  # Learning rate for ICM
 
-      - name: basic_crafting
-        steps: 100000
-        actions: [MOVE, JUMP, LOOK, DIG, ATTACK, CRAFT, INVENTORY]
-        reward_scale: 5.0
+    # Random Network Distillation (RND) - novelty bonus
+    rnd_scale: 0.5  # Weight for novelty reward
+    rnd_lr: 0.0001  # Learning rate for RND predictor
 
-      - name: survival
-        steps: 500000
-        actions: all
-        reward_scale: 10.0
+    # Count-based exploration
+    count_scale: 0.1  # Weight for count-based bonus
 
-      - name: building
-        steps: 1000000
-        actions: all
-        reward_scale: 15.0
+  # EXTRINSIC REWARDS: Minimal external rewards
+  # Most rewards come from intrinsic motivation, not hand-crafted rewards
+  use_extrinsic_rewards: false  # Disable hand-crafted rewards, use intrinsic only
 
   # Training parameters
-  total_timesteps: 10000000
-  batch_size: 128  # Increased from 64 for more reliable estimates
-  n_steps: 4096  # Increased from 2048 for more steps before update
+  total_timesteps: 50000000  # 50M steps for full autonomous learning
+  batch_size: 256  # Larger batch for more stable learning
+  n_steps: 8192  # More steps before update
   n_epochs: 10
 
   # Save frequency
-  save_freq: 10000
-  log_freq: 1000
+  save_freq: 25000  # Save less frequently
+  log_freq: 5000
 
 # Memory Configuration
 memory:

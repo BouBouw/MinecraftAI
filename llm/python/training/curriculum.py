@@ -72,13 +72,19 @@ class CurriculumStage:
         if self.episodes_completed < 10:
             return False
 
-        # Check if we've done enough steps
-        if self.current_step >= self.steps:
-            return True
+        # Must have completed minimum steps to evaluate performance
+        if self.current_step < 10000:  # Need at least 1 full episode
+            return False
 
         # Check if we've reached success threshold (based on recent 10 episodes)
+        # This is the PRIMARY criterion - must MEET the threshold to advance
         recent_avg = np.mean(self.episode_rewards[-10:])
         if recent_avg >= self.success_threshold:
+            return True
+
+        # Only auto-advance if we've done MAXIMUM steps and have decent performance
+        # (at least 50% of success threshold)
+        if self.current_step >= self.steps and recent_avg >= (self.success_threshold * 0.5):
             return True
 
         return False
@@ -135,7 +141,7 @@ class Curriculum:
                 'steps': 50000,  # 50K steps
                 'actions': [0, 1, 2, 5, 8, 9, 10, 11, 12, 17],  # NOOP, MOVE, JUMP, LOOK, ATTACK
                 'reward_scale': 1.0,
-                'success_threshold': 5000.0,  # Must avg 5K reward (reduced from 50K)
+                'success_threshold': 15000.0,  # Must avg 15K reward and be VERY stable
                 'description': 'Learn basic movement, controls, and mining'
             },
             {
@@ -143,7 +149,7 @@ class Curriculum:
                 'steps': 250000,  # 250K steps
                 'actions': [0, 1, 2, 5, 8, 9, 10, 11, 12, 17, 21, 22, 23],  # + ATTACK, DIG
                 'reward_scale': 1.2,  # Reduced from 2.0
-                'success_threshold': 10000.0,  # Must avg 10K reward (reduced from 150K)
+                'success_threshold': 50000.0,  # Must avg 50K reward (must master mining first!)
                 'description': 'Learn to gather resources by mining and attacking'
             },
             {
@@ -151,7 +157,7 @@ class Curriculum:
                 'steps': 750000,  # 750K steps
                 'actions': 'all',  # All actions available
                 'reward_scale': 1.5,  # Reduced from 5.0
-                'success_threshold': 20000.0,  # Must avg 20K reward (reduced from 400K)
+                'success_threshold': 100000.0,  # Must avg 100K reward (much harder!)
                 'description': 'Learn basic crafting recipes'
             },
             {
@@ -159,7 +165,7 @@ class Curriculum:
                 'steps': 2000000,  # 2M steps
                 'actions': 'all',
                 'reward_scale': 2.0,  # Reduced from 10.0
-                'success_threshold': 40000.0,  # Must avg 40K reward (reduced from 800K)
+                'success_threshold': 150000.0,  # Must avg 150K reward
                 'description': 'Learn to survive against mobs and at night'
             },
             {
@@ -167,7 +173,7 @@ class Curriculum:
                 'steps': 5000000,  # 5M steps
                 'actions': 'all',
                 'reward_scale': 2.5,  # Reduced from 15.0
-                'success_threshold': 60000.0,  # Must avg 60K reward (reduced from 1.2M)
+                'success_threshold': 200000.0,  # Must avg 200K reward
                 'description': 'Learn to build structures and shelters'
             }
         ]

@@ -170,8 +170,6 @@ async function executeAction(action) {
             break;
         case 12: // ATTACK (mine blocks) - Legacy action ID
         case 17: // ATTACK (mine blocks) - New action ID from Python
-            // Attack only swings arm, doesn't break blocks
-            // For mining, we need to use bot.dig() on the block in front
             try {
                 // Get block in front of bot
                 const pos = bot.entity.position;
@@ -183,19 +181,63 @@ async function executeAction(action) {
                 const targetBlock = bot.blockAt(pos.offset(dx, 0, dz));
 
                 if (targetBlock) {
-                    // bot.dig() is async and waits until block is broken
-                    // Don't add extra sleep after this!
-                    await bot.dig(targetBlock).catch(err => {
-                        console.log(`Dig error: ${err.message}`);
+                    // CRITICAL FIX: Check if block is AIR (already broken)
+                    // Type 0 = air, Type name 'air' = also air
+                    if (targetBlock.type === 0 || targetBlock.name === 'air') {
+                        console.log(`🌬️ Block is air - nothing to mine (position: ${targetBlock.position})`);
+                        // Don't try to mine air - just skip
+                        break;
+                    }
+
+                    // Log what we're mining for debugging
+                    const blockName = targetBlock.name || 'unknown';
+                    const blockHardness = targetBlock.hardness || 'unknown';
+
+                    console.log(`⛏️ Mining ${blockName} (hardness: ${blockHardness}) at ${targetBlock.position}`);
+
+                    // Smart tool selection: use best tool available
+                    const bestTool = bot.inventory.items().find(item =>
+                        item.name.includes('pickaxe') ||
+                        item.name.includes('axe') ||
+                        item.name.includes('shovel')
+                    );
+
+                    if (bestTool) {
+                        console.log(`🔧 Equipping tool: ${bestTool.name}`);
+                        await bot.equip(bestTool, 'hand');
+                    }
+
+                    // Add timeout to prevent infinite mining on unbreakable blocks
+                    // Different blocks have different mining times:
+                    // - Dirt: 0.75s (by hand)
+                    // - Stone: 1.5s (by hand)
+                    // - Iron ore: 3s+ (by hand)
+                    // - Obsidian: IMPOSSIBLE (needs diamond pickaxe)
+                    const digTimeout = 5000; // 5 second max
+
+                    const digPromise = bot.dig(targetBlock);
+                    const timeoutPromise = new Promise((_, reject) =>
+                        setTimeout(() => reject(new Error('Dig timeout - block too hard or unbreakable')), digTimeout)
+                    );
+
+                    await Promise.race([digPromise, timeoutPromise]).catch(err => {
+                        console.log(`⚠️  Dig failed: ${err.message}`);
+                        // Check if block is still there after timeout
+                        const blockAfter = bot.blockAt(targetBlock.position);
+                        if (blockAfter && blockAfter.type !== 0) {
+                            console.log(`🛑 Block too hard or wrong tool - giving up on ${blockAfter.name}`);
+                        }
                     });
-                    console.log(`⛏️ Mined block at ${targetBlock.position}`);
+
+                    console.log(`✅ Finished mining ${blockName} at ${targetBlock.position}`);
                 } else {
-                    // No block, just attack (swing arm)
+                    // No block, just attack (swing arm) for mobs
+                    console.log(`⚔️ No block to mine - attacking (mob check)`);
                     await bot.attack();
                 }
             } catch (err) {
                 // Fallback to attack if dig fails
-                console.log(`Attack fallback: ${err.message}`);
+                console.log(`⚠️ Attack fallback: ${err.message}`);
                 await bot.attack();
             }
             break;

@@ -93,9 +93,9 @@ async function handleMessage(ws, message) {
     if (type === 'action') {
         try {
             await executeAction(action);
-            ws.send(JSON.stringify({ type: 'action_complete', success: true, action }));
+            ws.send(JSON.stringify({ type: 'action_complete', success: true, action, observation: currentObservation }));
         } catch (err) {
-            ws.send(JSON.stringify({ type: 'action_complete', success: false, error: err.message }));
+            ws.send(JSON.stringify({ type: 'action_complete', success: false, error: err.message, observation: currentObservation }));
         }
     } else if (type === 'reset') {
         // Respawn bot

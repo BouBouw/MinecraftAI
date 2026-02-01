@@ -57,10 +57,12 @@ echo ""
 
 # Start streaming with test pattern + text overlay
 # TODO: Replace with real bot screenshots once implemented
+TEXT="Minecraft AI Bot Training - Training RL agent 24/7 on VPS - Stage: gathering - Episode: N/A"
+
 ffmpeg \
     -f lavfi -i color=c=black:s=${RESOLUTION}:r=${FPS} \
     -f lavfi -i anullsrc=r=44100:cl=mono \
-    -vf "drawtext=text='🤖 Minecraft AI Bot Training\n\n🎓 Training RL agent to play Minecraft\n📊 Episode: N/A | Reward: N/A\n📈 Stage: gathering (basic)\n\n⏳ Training 24/7 on VPS\n\nPowered by: PPO + Curriculum Learning':x=(w-text_w)/2:y=(h-text_h)/2:fontsize=24:fontcolor=white:box=1:boxcolor=black@0.5:line_spacing=20" \
+    -vf "drawtext=text=${TEXT}:x=(w-text_w)/2:y=(h-text_h)/2:fontsize=32:fontcolor=white:box=1:boxcolor=black@0.5" \
     -vcodec libx264 \
     -preset veryfast \
     -b:v ${BITRATE} \

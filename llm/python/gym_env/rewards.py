@@ -149,6 +149,10 @@ class RewardSystem:
         if action_type in [17, 20, 21, 22, 23]:  # ATTACK, BREAK_BLOCK, DIG_*
             reward += 5.0  # Increased from 2.0 - mining is critical!
 
+            # EXPLORATION BONUS: Reward just for TRYING to attack/mine
+            # This encourages the bot to USE the ATTACK action even before learning it mines blocks
+            reward += 3.0  # Bonus just for attempting to mine (helps early exploration)
+
             # Big bonus for discovering new block type
             if isinstance(action, dict):
                 mined_block = target_block

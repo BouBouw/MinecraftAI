@@ -19,7 +19,7 @@ agent:
   gamma: 0.99
   gae_lambda: 0.95
   clip_range: 0.2
-  entropy_coef: 0.05  # Increased from 0.01 for more exploration
+  entropy_coef: 0.2  # MASSIVE exploration boost! Force bot to try ATTACK action
   vf_coef: 0.5
   max_grad_norm: 0.5
 

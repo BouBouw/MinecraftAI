@@ -414,8 +414,11 @@ def create_trainer(
     logger.info(f"Creating Minecraft bridge client: {bridge_host}:{bridge_port}")
     bridge = MinecraftBotBridge(host=bridge_host, port=bridge_port)
 
-    # Create environment with bridge
-    env = create_minecraft_env(config, bridge_client=bridge)
+    # Create curriculum first (needed by environment)
+    curriculum = create_curriculum(config)
+
+    # Create environment with bridge AND curriculum
+    env = create_minecraft_env(config, curriculum=curriculum, bridge_client=bridge)
 
     # Create agent
     agent = create_ppo_agent(config=config)
@@ -424,7 +427,8 @@ def create_trainer(
     return Trainer(
         config=config,
         env=env,
-        agent=agent
+        agent=agent,
+        curriculum=curriculum  # Pass curriculum to trainer as well
     )
 
 

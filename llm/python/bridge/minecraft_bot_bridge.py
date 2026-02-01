@@ -24,19 +24,19 @@ logger = get_logger(__name__)
 @dataclass
 class BotState:
     """Current state of the Minecraft bot"""
-    position: Dict[str, float]  # x, y, z
-    rotation: Dict[str, float]  # yaw, pitch
+    position: List[float]  # [x, y, z]
+    rotation: List[float]  # [yaw, pitch]
     health: float
     food: float
     saturation: float
-    on_ground: bool
-    in_water: bool
-    inventory: List[Dict[str, Any]]
+    on_ground: int  # 0 or 1
+    in_water: int  # 0 or 1
+    inventory: List[List[int]]  # [[item_id, count], ...]
     held_item: int
     armor: Dict[str, int]
     nearby_entities: List[Dict[str, Any]]
     time_of_day: int
-    is_raining: bool
+    is_raining: int  # 0 or 1
     biome_id: int
 
 
@@ -148,14 +148,14 @@ class MinecraftBotBridge:
             health=obs_data['health'],
             food=obs_data['food'],
             saturation=obs_data['saturation'],
-            on_ground=obs_data.get('on_ground', False),
-            in_water=obs_data.get('in_water', False),
+            on_ground=obs_data.get('on_ground', 1),
+            in_water=obs_data.get('in_water', 0),
             inventory=obs_data['inventory'],
-            held_item=obs_data.get('held_item', 0),
+            held_item=obs_data.get('hotbar_selected', 0),
             armor=obs_data.get('armor', {}),
             nearby_entities=obs_data.get('nearby_entities', []),
             time_of_day=obs_data.get('time_of_day', 0),
-            is_raining=obs_data.get('is_raining', False),
+            is_raining=obs_data.get('is_raining', 0),
             biome_id=obs_data.get('biome_id', 0)
         )
 
@@ -173,19 +173,19 @@ class MinecraftBotBridge:
         if observation_data:
             logger.debug(f"Received observation: {list(observation_data.keys())}")
             self.current_state = BotState(
-                position=observation_data.get('position', {}),
-                rotation=observation_data.get('rotation', {}),
+                position=observation_data.get('position', [0, 64, 0]),
+                rotation=observation_data.get('rotation', [0, 0]),
                 health=observation_data.get('health', 20),
                 food=observation_data.get('food', 20),
                 saturation=observation_data.get('saturation', 20),
-                on_ground=observation_data.get('on_ground', False),
-                in_water=observation_data.get('in_water', False),
+                on_ground=observation_data.get('on_ground', 1),
+                in_water=observation_data.get('in_water', 0),
                 inventory=observation_data.get('inventory', []),
                 held_item=observation_data.get('hotbar_selected', 0),
                 armor=observation_data.get('armor', {}),
                 nearby_entities=observation_data.get('nearby_entities', []),
                 time_of_day=observation_data.get('time_of_day', 0),
-                is_raining=observation_data.get('is_raining', False),
+                is_raining=observation_data.get('is_raining', 0),
                 biome_id=observation_data.get('biome_id', 0)
             )
             logger.info(f"✅ Updated state: health={self.current_state.health}, food={self.current_state.food}")
@@ -294,19 +294,19 @@ class MinecraftBotBridge:
     def _get_default_observation(self) -> Dict[str, Any]:
         """Return default observation when state is not available"""
         return {
-            'position': {'x': 0, 'y': 64, 'z': 0},
-            'rotation': {'yaw': 0, 'pitch': 0},
+            'position': [0, 64, 0],
+            'rotation': [0, 0],
             'health': 20,
             'food': 20,
             'saturation': 20,
-            'on_ground': True,
-            'in_water': False,
+            'on_ground': 1,
+            'in_water': 0,
             'inventory': [],
             'held_item': 0,
             'armor': {},
             'nearby_entities': [],
             'time_of_day': 0,
-            'is_raining': False,
+            'is_raining': 0,
             'biome_id': 1
         }
 

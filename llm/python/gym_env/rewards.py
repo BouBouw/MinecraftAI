@@ -203,15 +203,22 @@ class RewardSystem:
     def _achievement_reward(
         self,
         state: Dict[str, Any],
-        action: Dict[str, Any],
+        action: Any,
         next_state: Dict[str, Any]
     ) -> float:
         """Calculate first-time achievement bonuses"""
         reward = 0.0
 
-        # First craft discovery
-        if action.get('action_type') in [27, 28]:  # CRAFT_ITEM, CRAFT_UNKNOWN
+        # Handle both int actions (from agent) and dict actions (from bridge)
+        if isinstance(action, int):
+            action_type = action
+            crafted_item = 0
+        else:
+            action_type = action.get('action_type', 0)
             crafted_item = action.get('target_block', 0)
+
+        # First craft discovery
+        if action_type in [27, 28]:  # CRAFT_ITEM, CRAFT_UNKNOWN
             if crafted_item not in self.discovered_crafts:
                 self.discovered_crafts.add(crafted_item)
                 new_craft_bonus = self.reward_config.get('new_craft_discovered', 100)

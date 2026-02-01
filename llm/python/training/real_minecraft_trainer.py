@@ -112,7 +112,7 @@ class RealMinecraftTrainer:
             done = False
 
             # Start episode in memory
-            curriculum_stage = self.curriculum.get_current_stage(steps)
+            curriculum_stage = self.curriculum.get_current_stage()
             episode_id = self.memory.episodic.start_episode(curriculum_stage)
 
             # Episode loop
@@ -169,7 +169,7 @@ class RealMinecraftTrainer:
                 self.save_checkpoint(episode_num)
 
             # Update curriculum
-            self.curriculum.update_progress(steps)
+            self.curriculum.update_progress(steps, self.current_episode_reward)
 
             # Save memories
             self.memory.long_term.store_episode_summary(episode_id, {

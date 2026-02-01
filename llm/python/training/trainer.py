@@ -126,6 +126,7 @@ class Trainer:
         self.checkpoint_dir = Path(self.config.get('checkpointing.save_dir', './data/models'))
         self.checkpoint_dir.mkdir(parents=True, exist_ok=True)
         self.save_freq = self.config.get('checkpointing.save_frequency', 10000)
+        self.log_freq = self.training_config.get('log_freq', 5000)
 
         # TensorBoard (if available)
         self.writer = None

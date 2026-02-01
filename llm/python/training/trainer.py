@@ -206,8 +206,8 @@ class Trainer:
                 done=done or truncated
             )
 
-            # Store in memory
-            if self.memory:
+            # Store in memory (if memory manager supports it)
+            if self.memory and hasattr(self.memory, 'remember_transition'):
                 self.memory.remember_transition(obs, action, shaped_reward, done or truncated, next_obs)
 
             # Update curriculum progress

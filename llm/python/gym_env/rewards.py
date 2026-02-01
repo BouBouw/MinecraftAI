@@ -198,8 +198,8 @@ class RewardSystem:
             last_x, last_y, last_z = self.last_position
             distance = ((x - last_x)**2 + (z - last_z)**2)**0.5  # Only X-Z distance
 
-            # Reward for movement (0.1 per block traveled)
-            reward += distance * 0.1
+            # Reward for movement - INCREASED to make movement VERY attractive
+            reward += distance * 2.0  # 2.0 per block (instead of 0.1) - 20× more!
 
             self.total_distance += distance
 

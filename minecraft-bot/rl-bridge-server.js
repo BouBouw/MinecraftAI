@@ -168,7 +168,8 @@ async function executeAction(action) {
             bot.look(bot.entity.yaw, bot.entity.pitch - 0.2);
             await new Promise(resolve => setTimeout(resolve, 100));
             break;
-        case 12: // ATTACK (mine blocks)
+        case 12: // ATTACK (mine blocks) - Legacy action ID
+        case 17: // ATTACK (mine blocks) - New action ID from Python
             // Attack only swings arm, doesn't break blocks
             // For mining, we need to use bot.dig() on the block in front
             try {

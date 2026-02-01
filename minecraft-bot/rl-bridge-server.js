@@ -3,6 +3,7 @@
  * This server connects to Mineflayer bot and exposes WebSocket API
  */
 
+import 'dotenv/config';
 import mineflayer from 'mineflayer';
 import { WebSocketServer } from 'ws';
 import express from 'express';
@@ -54,11 +55,8 @@ bot.on('error', (err) => {
 bot.on('end', () => {
     console.log('🔌 Bot disconnected from Minecraft');
     botConnected = false;
-    // Attempt to reconnect after 10 seconds
-    setTimeout(() => {
-        console.log('🔄 Attempting to reconnect...');
-        bot.connect();
-    }, 10000);
+    // Note: Mineflayer doesn't support reconnection, need to restart the server
+    console.log('⚠️  Please restart the bridge server to reconnect');
 });
 
 // Create WebSocket server

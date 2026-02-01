@@ -283,9 +283,13 @@ class PPOAgent:
             # Create mini-batches
             indices = np.random.permutation(len(observations))
 
+            logger.info(f"Epoch {epoch}: len(observations)={len(observations)}, buffer_size={buffer_size}, batch_size={batch_size}")
+
             for start in range(0, len(observations), batch_size):
                 end = start + batch_size
                 batch_indices = indices[start:end]
+
+                logger.info(f"  Batch: start={start}, end={end}, len(batch_indices)={len(batch_indices)}")
 
                 # Get batch data
                 batch_obs = [observations[i] for i in batch_indices]
@@ -314,8 +318,15 @@ class PPOAgent:
                 # Evaluate current policy
                 obs_tensors_list = [self._observation_to_tensors(obs) for obs in batch_obs]
 
+                logger.info(f"  Created obs_tensors_list: len={len(obs_tensors_list)}")
+                if len(obs_tensors_list) > 0:
+                    logger.info(f"  First obs_tensor keys: {list(obs_tensors_list[0].keys())}")
+                    for key, val in list(obs_tensors_list[0].items())[:3]:  # Log first 3 items
+                        logger.info(f"    {key}: shape={val.shape}")
+
                 # Skip if no observations to stack
                 if len(obs_tensors_list) == 0:
+                    logger.warning("obs_tensors_list is empty, skipping")
                     continue
 
                 # Stack tensors
@@ -323,6 +334,7 @@ class PPOAgent:
                 if len(obs_tensors_list) > 0:
                     for key in obs_tensors_list[0].keys():
                         stacked_obs[key] = torch.cat([obs[key] for obs in obs_tensors_list], dim=0)
+                    logger.info(f"  Stacked obs: keys={list(stacked_obs.keys())}, len={len(stacked_obs)}")
                 else:
                     logger.warning("obs_tensors_list is empty, cannot stack")
                     continue

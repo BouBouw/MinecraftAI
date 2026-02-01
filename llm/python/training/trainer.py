@@ -395,7 +395,23 @@ def create_trainer(
     Returns:
         Trainer instance
     """
-    return Trainer(config)
+    config = config or get_config()
+
+    # Create environment
+    env = create_minecraft_env(config)
+
+    # Create agent
+    agent = create_ppo_agent(
+        env=env,
+        config=config
+    )
+
+    # Create trainer with all components
+    return Trainer(
+        config=config,
+        env=env,
+        agent=agent
+    )
 
 
 # Convenience function for quick training start

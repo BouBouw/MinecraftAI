@@ -237,19 +237,25 @@ class MinecraftBotBridge:
 
         return result
 
-    async def execute_action(self, action: Dict[str, Any], current_state: Dict[str, Any]) -> tuple[Dict[str, Any], bool]:
+    async def execute_action(self, action: Any, current_state: Dict[str, Any]) -> tuple[Dict[str, Any], bool]:
         """
         Execute action and get new state
 
         Args:
-            action: Action dictionary with 'action_type' and params
+            action: Action (int action_id or dict with 'action'/'action_type')
             current_state: Current state (not used directly, gets new state from bot)
 
         Returns:
             Tuple of (next_state, success)
         """
         # Extract action type and parameters
-        action_type = action.get('action', action.get('action_type', 0))
+        # Handle both int actions and dict actions
+        if isinstance(action, int):
+            action_type = action
+        elif isinstance(action, dict):
+            action_type = action.get('action', action.get('action_type', 0))
+        else:
+            action_type = 0
 
         # Send action to bot
         result = await self.send_action(action_type)

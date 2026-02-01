@@ -177,13 +177,17 @@ async function executeAction(action) {
                 const pos = bot.entity.position;
                 const yaw = bot.entity.yaw;
 
-                // Calculate block position in front of bot (1 block away)
+                // Calculate block position in front of bot (1 block away, at eye level)
                 const dx = -Math.sin(yaw) * 1;
                 const dz = Math.cos(yaw) * 1;
                 const targetBlock = bot.blockAt(pos.offset(dx, 0, dz));
 
                 if (targetBlock) {
-                    await bot.dig(targetBlock);
+                    // bot.dig() is async and waits until block is broken
+                    // Don't add extra sleep after this!
+                    await bot.dig(targetBlock).catch(err => {
+                        console.log(`Dig error: ${err.message}`);
+                    });
                     console.log(`⛏️ Mined block at ${targetBlock.position}`);
                 } else {
                     // No block, just attack (swing arm)

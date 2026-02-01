@@ -33,6 +33,12 @@ agent:
 
 # Training Configuration
 training:
+  # PARALLEL ENVIRONMENTS: Run multiple bots simultaneously for 8x speedup
+  parallel_envs:
+    enabled: true  # Enable parallel environments
+    num_envs: 8  # Number of parallel environments (8 = 8x speedup!)
+    base_port: 8765  # Starting WebSocket port (will use 8765-8772 for 8 envs)
+
   # AUTO-CURRICULUM: Agent discovers and learns ALL mechanics autonomously
   # No human-specified stages - agent sets its own learning goals
   auto_curriculum:

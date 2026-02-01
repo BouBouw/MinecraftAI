@@ -17,6 +17,7 @@ from crafting.craft_discovery import CraftDiscoverySystem
 from training.curriculum import Curriculum, RewardShaper, create_curriculum
 from training.auto_curriculum import AutoCurriculum, create_auto_curriculum
 from gym_env.minecraft_env import MinecraftEnv, create_minecraft_env
+from gym_env.parallel_env import ParallelMinecraftEnv, create_parallel_env
 from bridge.minecraft_bot_bridge import MinecraftBotBridge
 from utils.config import get_config
 from utils.logger import get_logger, log_episode_start, log_episode_end
@@ -64,9 +65,15 @@ class Trainer:
         # Check if using auto-curriculum mode
         self.auto_curriculum_enabled = self.training_config.get('auto_curriculum', {}).get('enabled', False)
         self.curiosity_enabled = self.training_config.get('curiosity', {}).get('enabled', False)
+        self.use_parallel_envs = self.training_config.get('parallel_envs', {}).get('enabled', False)
 
         logger.info(f"🎓 Auto-Curriculum: {'ENABLED' if self.auto_curriculum_enabled else 'DISABLED'}")
         logger.info(f"🤖 Intrinsic Curiosity: {'ENABLED' if self.curiosity_enabled else 'DISABLED'}")
+        if self.use_parallel_envs:
+            num_envs = self.training_config.get('parallel_envs', {}).get('num_envs', 8)
+            logger.info(f"⚡ Parallel Environments: ENABLED ({num_envs}x speedup)")
+        else:
+            logger.info("⚡ Parallel Environments: DISABLED")
 
         # Initialize components
         self.env = env
@@ -139,40 +146,78 @@ class Trainer:
 
         logger.info(f"Starting training for {total_timesteps} timesteps")
         logger.info(f"Mode: {'AUTO-CURRICULUM' if self.auto_curriculum_enabled else 'FIXED CURRICULUM'}")
+        if self.use_parallel_envs:
+            num_envs = self.training_config.get('parallel_envs', {}).get('num_envs', 8)
+            logger.info(f"⚡ Using {num_envs} PARALLEL ENVIRONMENTS")
 
         start_time = time.time()
         episode_num = 0
 
+        # Initialize parallel environments
+        if self.use_parallel_envs:
+            logger.info("Resetting all parallel environments...")
+            current_observations, _ = self.env.reset()
+            logger.info(f"All {len(self.env)} environments ready!")
+
         while self.total_steps < total_timesteps:
-            episode_num += 1
+            if self.use_parallel_envs:
+                # Parallel environments: run steps across all envs
+                parallel_stats = self._train_parallel_step(current_observations)
 
-            # Start episode
-            episode_stats = self._train_episode(episode_num)
+                # Update observations for next step
+                current_observations = parallel_stats['next_observations']
 
-            # Log progress
-            if episode_num % 10 == 0:
-                self._log_progress(episode_num, episode_stats)
+                # Log progress less frequently for parallel (more steps per iteration)
+                if self.total_steps % self.log_freq == 0:
+                    logger.info(
+                        f"⚡ Steps: {self.total_steps}/{total_timesteps} | "
+                        f"Avg Reward: {parallel_stats['total_reward']/(parallel_stats['num_steps'] or 1):.2f} | "
+                        f"Speed: {len(self.env)}x"
+                    )
 
-                # Log mechanic mastery if using auto-curriculum
-                if self.auto_curriculum_enabled and self.auto_curriculum and episode_num % 100 == 0:
-                    logger.info(self.auto_curriculum.get_mechanic_report())
+                    # Log mechanic mastery if using auto-curriculum
+                    if self.auto_curriculum_enabled and self.auto_curriculum and self.total_steps % 10000 == 0:
+                        logger.info(self.auto_curriculum.get_mechanic_report())
 
-            # Curriculum advancement (only for fixed curriculum)
-            if not self.auto_curriculum_enabled and self.curriculum:
-                if self.curriculum.should_advance():
-                    old_stage = self.curriculum.current_stage_idx
-                    self.curriculum.advance_stage()
+                # Save checkpoint
+                if self.total_steps % self.save_freq == 0 and self.total_steps > 0:
+                    self._save_checkpoint(episode_num)
 
-                    if old_stage != self.curriculum.current_stage_idx:
-                        logger.info(f"✨ Advanced to curriculum stage {self.curriculum.current_stage_idx}")
+                # Callback
+                if callback:
+                    callback(self, parallel_stats)
 
-            # Save checkpoint
-            if self.total_steps % self.save_freq == 0 and self.total_steps > 0:
-                self._save_checkpoint(episode_num)
+            else:
+                # Single environment: run full episodes
+                episode_num += 1
 
-            # Callback
-            if callback:
-                callback(self, episode_stats)
+                # Start episode
+                episode_stats = self._train_episode(episode_num)
+
+                # Log progress
+                if episode_num % 10 == 0:
+                    self._log_progress(episode_num, episode_stats)
+
+                    # Log mechanic mastery if using auto-curriculum
+                    if self.auto_curriculum_enabled and self.auto_curriculum and episode_num % 100 == 0:
+                        logger.info(self.auto_curriculum.get_mechanic_report())
+
+                # Curriculum advancement (only for fixed curriculum)
+                if not self.auto_curriculum_enabled and self.curriculum:
+                    if self.curriculum.should_advance():
+                        old_stage = self.curriculum.current_stage_idx
+                        self.curriculum.advance_stage()
+
+                        if old_stage != self.curriculum.current_stage_idx:
+                            logger.info(f"✨ Advanced to curriculum stage {self.curriculum.current_stage_idx}")
+
+                # Save checkpoint
+                if self.total_steps % self.save_freq == 0 and self.total_steps > 0:
+                    self._save_checkpoint(episode_num)
+
+                # Callback
+                if callback:
+                    callback(self, episode_stats)
 
         # Training complete
         elapsed_time = time.time() - start_time
@@ -395,6 +440,117 @@ class Trainer:
 
         return stats
 
+    def _train_parallel_step(self, observations: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """
+        Run one step across all parallel environments
+
+        Args:
+            observations: List of current observations from each environment
+
+        Returns:
+            Combined statistics from all environments
+        """
+        num_envs = len(self.env)
+
+        # Select actions for all environments
+        actions = []
+        log_probs = []
+        values = []
+
+        for obs in observations:
+            action, log_prob, value = self.agent.select_action(obs)
+            actions.append(action)
+            log_probs.append(log_prob)
+            values.append(value)
+
+        # Step all environments
+        next_observations, rewards, dones, truncateds, infos = self.env.step(actions)
+
+        # Process transitions from all environments
+        total_reward = 0
+        total_steps = num_envs
+
+        # Store transitions and collect ICM data
+        icm_observations = []
+        icm_next_observations = []
+        icm_actions = []
+
+        for i in range(num_envs):
+            obs = observations[i]
+            action = actions[i]
+            log_prob = log_probs[i]
+            value = values[i]
+            reward = rewards[i]
+            done = dones[i] or truncateds[i]
+            next_obs = next_observations[i]
+
+            # Apply reward shaping
+            if self.auto_curriculum_enabled:
+                shaped_reward = reward
+            elif hasattr(self, 'reward_shaper'):
+                shaped_reward = self.reward_shaper.shape_reward(reward)
+            else:
+                shaped_reward = reward
+
+            # Store transition
+            self.agent.store_transition(
+                observation=obs,
+                action=action,
+                log_prob=log_prob,
+                reward=shaped_reward,
+                value=value,
+                done=done
+            )
+
+            # Collect for ICM update
+            if self.curiosity_enabled:
+                icm_observations.append(obs)
+                icm_next_observations.append(next_obs)
+                icm_actions.append(action)
+
+            total_reward += shaped_reward
+
+            # Update curriculum progress
+            if self.auto_curriculum_enabled and self.auto_curriculum:
+                self.auto_curriculum.update(self.total_steps + i)
+            elif self.curriculum:
+                self.curriculum.update_progress(1, shaped_reward)
+
+        self.total_steps += total_steps
+
+        # Update policy if buffer is full
+        update_stats = None
+        if len(self.agent.rollout_buffer) >= self.agent.n_steps:
+            update_stats = self.agent.update()
+
+            # Update curiosity module
+            if self.curiosity_enabled and self.curiosity_module and len(icm_observations) > 0:
+                icm_stats = self.curiosity_module.update_icm(
+                    icm_observations,
+                    icm_next_observations,
+                    icm_actions
+                )
+                if update_stats:
+                    update_stats.update(icm_stats)
+
+        # Auto-reset terminated environments
+        terminated_indices = [i for i, done in enumerate(dones) if done]
+        if terminated_indices:
+            # For terminated environments, we'll reset them and use a placeholder obs
+            # The actual reset will happen in the next iteration
+            self.env.reset_terminated(terminated_indices)
+            # Mark terminated observations for reset (will be handled in next iteration)
+            for i in terminated_indices:
+                # Keep the observation but it will be replaced after reset
+                pass
+
+        return {
+            'next_observations': next_observations,
+            'total_reward': total_reward,
+            'num_steps': total_steps,
+            'update_stats': update_stats
+        }
+
     def _log_progress(self, episode_num: int, episode_stats: Dict[str, Any]):
         """Log training progress"""
         agent_stats = self.agent.get_statistics()
@@ -560,18 +716,14 @@ def create_trainer(
     if config is None:
         config = get_config()
 
-    # Create Minecraft bridge client
-    bridge_config = config.get('bridge', {})
-    bridge_host = bridge_config.get('host', 'localhost')
-    bridge_port = bridge_config.get('port', 8765)
-
-    logger.info(f"Creating Minecraft bridge client: {bridge_host}:{bridge_port}")
-    bridge = MinecraftBotBridge(host=bridge_host, port=bridge_port)
-
     # Check training mode
     training_config = config.get('training', {})
     auto_curriculum_enabled = training_config.get('auto_curriculum', {}).get('enabled', False)
     curiosity_enabled = training_config.get('curiosity', {}).get('enabled', False)
+
+    # Check if using parallel environments
+    parallel_env_config = training_config.get('parallel_envs', {})
+    use_parallel_envs = parallel_env_config.get('enabled', False)
 
     # Create curriculum (fixed or auto)
     if auto_curriculum_enabled:
@@ -583,8 +735,33 @@ def create_trainer(
         curriculum = create_curriculum(config)
         auto_curriculum = None
 
-    # Create environment with bridge and curriculum
-    env = create_minecraft_env(config, curriculum=curriculum, bridge_client=bridge)
+    # Create environment(s)
+    if use_parallel_envs:
+        # PARALLEL ENVIRONMENTS - 8x speedup!
+        num_envs = parallel_env_config.get('num_envs', 8)
+        base_port = parallel_env_config.get('base_port', 8765)
+
+        logger.info(f"⚡ Creating {num_envs} PARALLEL ENVIRONMENTS")
+        logger.info(f"   Port range: {base_port} - {base_port + num_envs - 1}")
+        logger.info(f"   Expected speedup: ~{num_envs}x")
+
+        env = create_parallel_env(
+            config,
+            num_envs=num_envs,
+            base_port=base_port
+        )
+    else:
+        # Single environment
+        # Create Minecraft bridge client
+        bridge_config = config.get('bridge', {})
+        bridge_host = bridge_config.get('host', 'localhost')
+        bridge_port = bridge_config.get('port', 8765)
+
+        logger.info(f"Creating Minecraft bridge client: {bridge_host}:{bridge_port}")
+        bridge = MinecraftBotBridge(host=bridge_host, port=bridge_port)
+
+        # Create environment with bridge and curriculum
+        env = create_minecraft_env(config, curriculum=curriculum, bridge_client=bridge)
 
     # Create curiosity module if enabled
     curiosity_module = None

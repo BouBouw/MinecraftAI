@@ -316,8 +316,13 @@ class Trainer:
             else:
                 shaped_reward = reward
 
+            # Apply reward normalization and clipping to prevent explosion
+            if self.reward_normalization_system:
+                norm_result = self.reward_normalization_system.process_step(shaped_reward, done or truncated)
+                shaped_reward = norm_result['normalized_reward']
+
             # Log reward régulièrement pour voir s'il y a du progrès
-            if self.total_steps % 100 == 0 and abs(shaped_reward) > 0.001:
+            if self.total_steps % 100 == 0:
                 logger.info(f"Step {self.total_steps}: reward={shaped_reward:.6f}")
 
             # Store transition for PPO

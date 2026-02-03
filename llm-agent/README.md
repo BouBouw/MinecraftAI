@@ -52,13 +52,18 @@ pip install anthropic aiohttp
 
 ### 2. Clé API (Optionnel)
 
-**Option A: Z.ai (GLM 4.7) - Recommandé**
+**Option A: Z.ai (GLM-4) - Recommandé**
 
 ```bash
 export ZAI_API_KEY="votre_clé_zai_ici"
 ```
 
 Obtenez votre clé sur: https://open.bigmodel.cn/
+
+**Modèles disponibles:**
+- `glm-4` - Modèle standard (par défaut)
+- `glm-4-plus` - Version améliorée
+- `glm-4-air` - Modèle ultra-rapide
 
 **Option B: Anthropic Claude**
 

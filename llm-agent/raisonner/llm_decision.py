@@ -251,7 +251,7 @@ Décide de la meilleure action à entreprendre:"""
         }
 
         payload = {
-            "model": "glm-4-flash",  # GLM 4 Flash (plus rapide) ou "glm-4-plus"
+            "model": "glm-4",  # GLM-4 standard (supporté par Zhipu AI)
             "messages": [
                 {
                     "role": "user",

@@ -18,8 +18,10 @@ from pathlib import Path
 from datetime import datetime
 from typing import Dict, Any, List
 import time
+import asyncio
 
 from gym_env.minecraft_env import create_minecraft_env
+from bridge.minecraft_bot_bridge import MinecraftBotBridge
 from utils.config import get_config
 from utils.logger import get_logger
 
@@ -60,6 +62,15 @@ class ExpertMinecraftBot:
         # Reset environment
         obs, info = self.env.reset()
 
+        # Handle if obs returns tuple
+        if isinstance(obs, tuple):
+            obs = obs[0]
+
+        # Ensure obs is a dict
+        if not isinstance(obs, dict):
+            logger.warning(f"⚠️  Observation is not a dict: {type(obs)}")
+            obs = {'position': [0, 64, 0], 'health': 20, 'food': 20}
+
         # Get current position
         pos = obs.get('position', [0, 64, 0])
 
@@ -77,6 +88,10 @@ class ExpertMinecraftBot:
                 # Step the environment - returns (obs, reward, terminated, truncated, info)
                 next_obs, reward, terminated, truncated, info = self.env.step(action_dict)
                 done = terminated or truncated
+
+                # Ensure next_obs is a dict
+                if not isinstance(next_obs, dict):
+                    next_obs = {'position': [0, 64, 0], 'health': 20, 'food': 20}
 
                 # Record transition
                 episode.append({
@@ -228,8 +243,25 @@ def generate_auto_demos_main():
     logger.info(f"Episodes to generate: {num_episodes}")
     logger.info(f"Output: {output_path}")
 
-    # Create environment (synchronous)
-    env = create_minecraft_env(config=config)
+    # Create bridge and connect
+    bridge_config = config.get('bridge', {})
+    bridge_host = bridge_config.get('host', 'localhost')
+    bridge_port = bridge_config.get('port', 8765)
+
+    logger.info(f"📡 Connecting to bridge at {bridge_host}:{bridge_port}")
+
+    async def create_env_with_bridge():
+        bridge = MinecraftBotBridge(host=bridge_host, port=bridge_port)
+        await bridge.connect()
+        env = create_minecraft_env(config=config, bridge_client=bridge)
+        return env, bridge
+
+    # Run async setup
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    env, bridge = loop.run_until_complete(create_env_with_bridge())
+
+    logger.info("✅ Connected! Starting demo generation...")
 
     # Generate demonstrations
     expert_bot = ExpertMinecraftBot(config, env)
@@ -256,6 +288,8 @@ def generate_auto_demos_main():
     logger.info(f"💾 Saved {len(demos)} episodes to {output_path}")
     logger.info(f"   Total steps: {sum(len(ep) for ep in demos)}")
     logger.info("✅ Auto-demo generation complete!")
+
+    loop.close()
 
 
 if __name__ == "__main__":

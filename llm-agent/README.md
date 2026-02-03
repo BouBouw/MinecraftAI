@@ -47,13 +47,23 @@ llm-agent/
 ### 1. Dépendances Python
 
 ```bash
-pip install anthropic
+pip install anthropic aiohttp
 ```
 
-### 2. Clé API Anthropic (Optionnel)
+### 2. Clé API (Optionnel)
+
+**Option A: Z.ai (GLM 4.7) - Recommandé**
 
 ```bash
-export ANTHROPIC_API_KEY="votre_clé_ici"
+export ZAI_API_KEY="votre_clé_zai_ici"
+```
+
+Obtenez votre clé sur: https://open.bigmodel.cn/
+
+**Option B: Anthropic Claude**
+
+```bash
+export ANTHROPIC_API_KEY="votre_clé_anthropic_ici"
 ```
 
 **Sans clé API** : Mode démo avec règles simples
@@ -65,10 +75,15 @@ export ANTHROPIC_API_KEY="votre_clé_ici"
 ```bash
 cd llm/python
 
-# Avec objectif personnalisé
-python ../llm-agent/hybrid_agent.py --objectif "Miner 5 blocs de fer" --steps 100
+# Avec Z.ai (GLM 4.7) - Recommandé
+export ZAI_API_KEY="votre_clé"
+python ../llm-agent/hybrid_agent.py --provider z.ai --objectif "Miner 5 blocs de fer" --steps 100
 
-# Objectif de survie
+# Avec Claude (Anthropic)
+export ANTHROPIC_API_KEY="votre_clé"
+python ../llm-agent/hybrid_agent.py --provider anthropic --objectif "Miner 5 blocs de fer" --steps 100
+
+# Mode démo (sans API)
 python ../llm-agent/hybrid_agent.py --objectif "Survivre et manger quand faim < 10" --steps 200
 
 # Exploration
@@ -78,6 +93,8 @@ python ../llm-agent/hybrid_agent.py --objectif "Explorer et trouver des minerais
 ### Options
 
 ```
+--provider="z.ai"      Utiliser Z.ai GLM 4.7 (défaut)
+--provider="anthropic"  Utiliser Claude Anthropic
 --objectif="..."    Objectif de l'agent (défaut: "Survivre et explorer")
 --config=...        Fichier de config (défaut: ../config/rl_config.yaml)
 --steps=N          Nombre max d'étapes (défaut: 100)

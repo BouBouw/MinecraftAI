@@ -2,11 +2,12 @@
 RAISONNEUR - Le cerveau LLM qui décide de la stratégie
 
 Ce module prend le rapport du Percepteur et décide de la prochaine action
-en utilisant un LLM (Claude, GPT-4, ou modèle local).
+en utilisant un LLM (GLM 4.7 via Z.ai, Claude, ou modèle local).
 """
 
 import json
 import os
+import aiohttp
 from typing import Dict, Any, Optional
 
 from utils.logger import get_logger
@@ -19,14 +20,14 @@ try:
     ANTHROPIC_AVAILABLE = True
 except ImportError:
     ANTHROPIC_AVAILABLE = False
-    logger.info("ℹ️  Module anthropic non installé - Mode démo activé")
+    logger.info("ℹ️  Module anthropic non installé")
 
 
 class LLMDecisionMaker:
     """
     Raisonneur LLM pour Minecraft Agent
 
-    Utilise Claude/Anthropic API pour prendre des décisions intelligentes
+    Utilise GLM 4.7 (Z.ai), Claude/Anthropic API pour prendre des décisions intelligentes
     basées sur l'état actuel du jeu.
     """
 
@@ -71,23 +72,41 @@ RÈGLES:
 6. Explique ton raisonnement dans "pensee"
 """
 
-    def __init__(self, api_key: Optional[str] = None):
+    def __init__(self, api_key: Optional[str] = None, provider: str = "z.ai"):
         """
         Initialize LLM Decision Maker
 
         Args:
-            api_key: Anthropic API key (si None, utilise la variable d'environnement)
+            api_key: Clé API (si None, utilise la variable d'environnement)
+            provider: "z.ai" pour GLM 4.7, "anthropic" pour Claude
         """
-        self.api_key = api_key or os.getenv('ANTHROPIC_API_KEY')
+        self.provider = provider
 
-        if not ANTHROPIC_AVAILABLE:
-            logger.warning("⚠️  Module anthropic non installé - Mode démo uniquement")
-            self.client = None
-        elif not self.api_key:
-            logger.warning("⚠️  Pas de clé API Anthropic - Mode démo uniquement")
-            self.client = None
+        if provider == "z.ai":
+            self.api_key = api_key or os.getenv('ZAI_API_KEY')
+            if not self.api_key:
+                logger.warning("⚠️  Pas de clé API Z.ai - Mode démo uniquement")
+                self.client = None
+            else:
+                logger.info("✅ Utilisation de Z.ai (GLM 4.7)")
+                self.client = True  # Marker pour utiliser Z.ai
+
+        elif provider == "anthropic":
+            self.api_key = api_key or os.getenv('ANTHROPIC_API_KEY')
+
+            if not ANTHROPIC_AVAILABLE:
+                logger.warning("⚠️  Module anthropic non installé - Mode démo uniquement")
+                self.client = None
+            elif not self.api_key:
+                logger.warning("⚠️  Pas de clé API Anthropic - Mode démo uniquement")
+                self.client = None
+            else:
+                self.client = Anthropic(api_key=self.api_key)
+                logger.info("✅ Utilisation de Claude (Anthropic)")
+
         else:
-            self.client = Anthropic(api_key=self.api_key)
+            logger.warning(f"⚠️  Provider inconnu: {provider} - Mode démo uniquement")
+            self.client = None
 
         self.historique_decisions = []
 
@@ -146,21 +165,12 @@ OBJECTIF ACTUEL: {objectif}
 Décide de la meilleure action à entreprendre:"""
 
         try:
-            response = await self.client.messages.create(
-                model="claude-3-5-sonnet-20241022",
-                max_tokens=1024,
-                temperature=0.3,  # Bas pour plus de cohérence
-                messages=[{
-                    "role": "user",
-                    "content": prompt
-                }]
-            )
-
-            response_text = response.content[0].text
-
-            # Extraire le JSON de la réponse
-            decision = self._parse_json_response(response_text)
-            return decision
+            if self.provider == "z.ai":
+                return await self._zai_decision(prompt)
+            elif self.provider == "anthropic" and self.client:
+                return await self._anthropic_decision(prompt)
+            else:
+                raise Exception("No valid LLM client available")
 
         except Exception as e:
             logger.error(f"❌ Erreur LLM: {e}")
@@ -221,6 +231,81 @@ Décide de la meilleure action à entreprendre:"""
             "parametres": {"direction": "random", "distance": 20},
             "priorite": "basse"
         }
+
+    async def _zai_decision(self, prompt: str) -> Dict[str, Any]:
+        """
+        Utilise Z.ai (GLM 4.7) pour prendre une décision
+
+        Args:
+            prompt: Prompt complet à envoyer à GLM
+
+        Returns:
+            Décision de GLM 4.7
+        """
+        # API Zhipu AI (GLM 4.7)
+        url = "https://open.bigmodel.cn/api/paas/v4/chat/completions"
+
+        headers = {
+            "Authorization": f"Bearer {self.api_key}",
+            "Content-Type": "application/json"
+        }
+
+        payload = {
+            "model": "glm-4-flash",  # GLM 4 Flash (plus rapide) ou "glm-4-plus"
+            "messages": [
+                {
+                    "role": "user",
+                    "content": prompt
+                }
+            ],
+            "temperature": 0.3,
+            "max_tokens": 1024,
+            "top_p": 0.7
+        }
+
+        async with aiohttp.ClientSession() as session:
+            async with session.post(url, json=payload, headers=headers) as response:
+                if response.status != 200:
+                    error_text = await response.text()
+                    logger.error(f"❌ Z.ai API error: {response.status} - {error_text}")
+                    raise Exception(f"Z.ai API error: {response.status}")
+
+                data = await response.json()
+
+                # Extraire la réponse
+                if "choices" in data and len(data["choices"]) > 0:
+                    response_text = data["choices"][0]["message"]["content"]
+                else:
+                    logger.error(f"❌ Z.ai invalid response: {data}")
+                    raise Exception("Invalid Z.ai response format")
+
+                # Parser le JSON
+                decision = self._parse_json_response(response_text)
+                return decision
+
+    async def _anthropic_decision(self, prompt: str) -> Dict[str, Any]:
+        """
+        Utilise Claude (Anthropic) pour prendre une décision
+
+        Args:
+            prompt: Prompt complet à envoyer à Claude
+
+        Returns:
+            Décision de Claude
+        """
+        response = await self.client.messages.create(
+            model="claude-3-5-sonnet-20241022",
+            max_tokens=1024,
+            temperature=0.3,
+            messages=[{
+                "role": "user",
+                "content": prompt
+            }]
+        )
+
+        response_text = response.content[0].text
+        decision = self._parse_json_response(response_text)
+        return decision
 
     def _parse_json_response(self, response_text: str) -> Dict[str, Any]:
         """

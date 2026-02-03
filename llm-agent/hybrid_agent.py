@@ -53,20 +53,23 @@ class HybridAgent:
     - LLM pour la planification (stratégie, objectifs)
     """
 
-    def __init__(self, config: Dict[str, Any], objectif: str):
+    def __init__(self, config: Dict[str, Any], objectif: str, provider: str = "z.ai"):
         """
         Initialize l'agent hybride
 
         Args:
             config: Configuration du système
             objectif: Objectif principal de l'agent
+            provider: Provider LLM ("z.ai" ou "anthropic")
         """
         self.config = config
         self.objectif = objectif
+        self.provider = provider
         self.episode_count = 0
 
         logger.info(f"🤖 Initialisation Agent Hybride")
         logger.info(f"🎯 Objectif: {objectif}")
+        logger.info(f"🧠 Provider LLM: {provider}")
 
     async def setup(self):
         """Configure les composants de l'agent"""
@@ -84,7 +87,7 @@ class HybridAgent:
         logger.info("✅ Environnement RL créé")
 
         # Initialiser le Raisonneur (LLM)
-        self.llm = LLMDecisionMaker()
+        self.llm = LLMDecisionMaker(provider=self.provider)
         logger.info("✅ Raisonneur LLM initialisé")
 
         # Initialiser l'Exécuteur
@@ -215,6 +218,7 @@ async def main():
     objectif = "Survivre et explorer"  # Objectif par défaut
     config_path = '../config/rl_config.yaml'
     max_steps = 100
+    provider = "z.ai"  # Provider par défaut
 
     if len(sys.argv) > 1:
         for arg in sys.argv[1:]:
@@ -224,10 +228,13 @@ async def main():
                 config_path = arg.split('=', 1)[1]
             elif arg.startswith('--steps='):
                 max_steps = int(arg.split('=', 1)[1])
+            elif arg.startswith('--provider='):
+                provider = arg.split('=', 1)[1]
 
     logger.info("="*60)
     logger.info("🤖 AGENT HYBRIDE RL + LLM")
     logger.info("="*60)
+    logger.info(f"Provider LLM: {provider}")
     logger.info(f"Objectif: {objectif}")
     logger.info(f"Max steps: {max_steps}")
     logger.info("="*60)
@@ -236,7 +243,7 @@ async def main():
     config = get_config(config_path)
 
     # Créer l'agent
-    agent = HybridAgent(config, objectif)
+    agent = HybridAgent(config, objectif, provider=provider)
 
     # Setup
     await agent.setup()

@@ -14,6 +14,14 @@ from utils.logger import get_logger
 
 logger = get_logger(__name__)
 
+# Import optionnel d'OpenAI
+try:
+    from openai import OpenAI
+    OPENAI_AVAILABLE = True
+except ImportError:
+    OPENAI_AVAILABLE = False
+    logger.info("ℹ️  Module openai non installé")
+
 # Import optionnel d'Anthropic
 try:
     from anthropic import Anthropic
@@ -72,17 +80,30 @@ RÈGLES:
 6. Explique ton raisonnement dans "pensee"
 """
 
-    def __init__(self, api_key: Optional[str] = None, provider: str = "z.ai"):
+    def __init__(self, api_key: Optional[str] = None, provider: str = "openai"):
         """
         Initialize LLM Decision Maker
 
         Args:
             api_key: Clé API (si None, utilise la variable d'environnement)
-            provider: "z.ai" pour GLM 4.7, "anthropic" pour Claude
+            provider: "openai" pour GPT, "z.ai" pour GLM 4.7, "anthropic" pour Claude
         """
         self.provider = provider
 
-        if provider == "z.ai":
+        if provider == "openai":
+            self.api_key = api_key or os.getenv('OPENAI_API_KEY')
+
+            if not OPENAI_AVAILABLE:
+                logger.warning("⚠️  Module openai non installé - Mode démo uniquement")
+                self.client = None
+            elif not self.api_key:
+                logger.warning("⚠️  Pas de clé API OpenAI - Mode démo uniquement")
+                self.client = None
+            else:
+                self.client = OpenAI(api_key=self.api_key)
+                logger.info("✅ Utilisation de GPT (OpenAI)")
+
+        elif provider == "z.ai":
             self.api_key = api_key or os.getenv('ZAI_API_KEY')
             if not self.api_key:
                 logger.warning("⚠️  Pas de clé API Z.ai - Mode démo uniquement")
@@ -165,7 +186,9 @@ OBJECTIF ACTUEL: {objectif}
 Décide de la meilleure action à entreprendre:"""
 
         try:
-            if self.provider == "z.ai":
+            if self.provider == "openai" and self.client:
+                return await self._openai_decision(prompt)
+            elif self.provider == "z.ai":
                 return await self._zai_decision(prompt)
             elif self.provider == "anthropic" and self.client:
                 return await self._anthropic_decision(prompt)
@@ -304,6 +327,36 @@ Décide de la meilleure action à entreprendre:"""
         )
 
         response_text = response.content[0].text
+        decision = self._parse_json_response(response_text)
+        return decision
+
+    async def _openai_decision(self, prompt: str) -> Dict[str, Any]:
+        """
+        Utilise GPT (OpenAI) pour prendre une décision
+
+        Args:
+            prompt: Prompt complet à envoyer à GPT
+
+        Returns:
+            Décision de GPT
+        """
+        response = self.client.chat.completions.create(
+            model="gpt-4o",
+            messages=[
+                {
+                    "role": "system",
+                    "content": "Tu es un agent intelligent dans Minecraft. Tu dois répondre uniquement en JSON valide avec les champs: pensee, action, parametres, priorite."
+                },
+                {
+                    "role": "user",
+                    "content": prompt
+                }
+            ],
+            temperature=0.3,
+            max_tokens=1024
+        )
+
+        response_text = response.choices[0].message.content
         decision = self._parse_json_response(response_text)
         return decision
 

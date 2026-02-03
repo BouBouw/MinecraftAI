@@ -53,7 +53,7 @@ class HybridAgent:
     - LLM pour la planification (stratégie, objectifs)
     """
 
-    def __init__(self, config: Dict[str, Any], objectif: str, provider: str = "z.ai"):
+    def __init__(self, config: Dict[str, Any], objectif: str, provider: str = "openai"):
         """
         Initialize l'agent hybride
 
@@ -218,7 +218,7 @@ async def main():
     objectif = "Survivre et explorer"  # Objectif par défaut
     config_path = '../config/rl_config.yaml'
     max_steps = 100
-    provider = "z.ai"  # Provider par défaut
+    provider = "openai"  # Provider par défaut
 
     if len(sys.argv) > 1:
         for arg in sys.argv[1:]:

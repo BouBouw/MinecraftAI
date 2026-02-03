@@ -47,12 +47,25 @@ llm-agent/
 ### 1. Dépendances Python
 
 ```bash
-pip install anthropic aiohttp
+pip install openai anthropic aiohttp
 ```
 
 ### 2. Clé API (Optionnel)
 
-**Option A: Z.ai (GLM-4) - Recommandé**
+**Option A: OpenAI (GPT-4) - Recommandé**
+
+```bash
+export OPENAI_API_KEY="votre_clé_openai_ici"
+```
+
+Obtenez votre clé sur: https://platform.openai.com/api-keys
+
+**Modèles disponibles:**
+- `gpt-4o` - Modèle GPT-4 Omni (par défaut, le plus performant)
+- `gpt-4o-mini` - Version plus rapide et économique
+- `gpt-4-turbo` - GPT-4 Turbo
+
+**Option B: Z.ai (GLM-4)**
 
 ```bash
 export ZAI_API_KEY="votre_clé_zai_ici"
@@ -80,7 +93,11 @@ export ANTHROPIC_API_KEY="votre_clé_anthropic_ici"
 ```bash
 cd llm/python
 
-# Avec Z.ai (GLM 4.7) - Recommandé
+# Avec OpenAI (GPT-4) - Recommandé
+export OPENAI_API_KEY="votre_clé"
+python ../llm-agent/hybrid_agent.py --provider openai --objectif "Miner 5 blocs de fer" --steps 100
+
+# Avec Z.ai (GLM 4.7)
 export ZAI_API_KEY="votre_clé"
 python ../llm-agent/hybrid_agent.py --provider z.ai --objectif "Miner 5 blocs de fer" --steps 100
 
@@ -98,7 +115,8 @@ python ../llm-agent/hybrid_agent.py --objectif "Explorer et trouver des minerais
 ### Options
 
 ```
---provider="z.ai"      Utiliser Z.ai GLM 4.7 (défaut)
+--provider="openai"     Utiliser GPT-4 (défaut)
+--provider="z.ai"       Utiliser Z.ai GLM 4.7
 --provider="anthropic"  Utiliser Claude Anthropic
 --objectif="..."    Objectif de l'agent (défaut: "Survivre et explorer")
 --config=...        Fichier de config (défaut: ../config/rl_config.yaml)
@@ -221,7 +239,14 @@ Raison: Explorer pour trouver du fer
 
 ## 🔧 Configuration
 
-### Avec API Claude (Recommandé)
+### Avec API OpenAI (Recommandé)
+
+Créez un fichier `.env`:
+```bash
+OPENAI_API_KEY="sk-..."
+```
+
+### Avec API Claude
 
 Créez un fichier `.env`:
 ```bash

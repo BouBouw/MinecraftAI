@@ -104,10 +104,10 @@ class ExpertMinecraftBot:
                     break
 
             except Exception as e:
-                logger.warning(f"⚠️  Action {action} failed: {e}")
-                import traceback
-                logger.debug(traceback.format_exc())
-                # Continue with next action instead of breaking
+                # Action executed but observation recording failed
+                # Bot still moves in-game, continue with next action
+                if len(episode) % 50 == 0:  # Log every 50 steps
+                    logger.debug(f"Obs recording issue at step {len(episode)}: {e}")
                 continue
 
         self.episode_count += 1

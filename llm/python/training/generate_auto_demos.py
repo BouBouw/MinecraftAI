@@ -12,12 +12,12 @@ Usage:
     python generate_auto_demos.py --num_episodes 100 --output ../data/demos/auto_demos.pkl
 """
 
-import asyncio
 import pickle
 import numpy as np
 from pathlib import Path
 from datetime import datetime
 from typing import Dict, Any, List
+import time
 
 from gym_env.minecraft_env import create_minecraft_env
 from utils.config import get_config
@@ -45,7 +45,7 @@ class ExpertMinecraftBot:
         self.env = env
         self.episode_count = 0
 
-    async def generate_demonstration(self, max_steps: int = 200) -> List[Dict]:
+    def generate_demonstration(self, max_steps: int = 200) -> List[Dict]:
         """
         Generate one demonstration episode
 
@@ -58,9 +58,7 @@ class ExpertMinecraftBot:
         episode = []
 
         # Reset environment
-        obs, info = await self.env.reset()
-        if isinstance(obs, tuple):
-            obs = obs[0]  # Handle if obs returns tuple
+        obs, info = self.env.reset()
 
         # Get current position
         pos = obs.get('position', [0, 64, 0])
@@ -77,15 +75,8 @@ class ExpertMinecraftBot:
                 action_dict = {'action': action} if isinstance(action, int) else action
 
                 # Step the environment - returns (obs, reward, terminated, truncated, info)
-                result = await self.env.step(action_dict)
-
-                # Unpack the 5-tuple
-                if len(result) == 5:
-                    next_obs, reward, terminated, truncated, info = result
-                    done = terminated or truncated
-                else:
-                    # Fallback for older interface
-                    next_obs, reward, done, info = result
+                next_obs, reward, terminated, truncated, info = self.env.step(action_dict)
+                done = terminated or truncated
 
                 # Record transition
                 episode.append({
@@ -100,7 +91,7 @@ class ExpertMinecraftBot:
                 obs = next_obs
 
                 # Small delay between actions
-                await asyncio.sleep(0.1)
+                time.sleep(0.1)
 
                 if done:
                     break
@@ -158,7 +149,7 @@ class ExpertMinecraftBot:
             # Crafting sequence
             actions.extend([43])  # Open inventory
             actions.extend([9])   # Select slot 1 (logs)
-            actions.extend([44])  # Close inventory (was 43 before)
+            actions.extend([44])  # Close inventory
             actions.extend([20])  # Craft planks
 
         elif sequence_type == 'survival':
@@ -173,7 +164,7 @@ class ExpertMinecraftBot:
 
         return actions[:max_steps]
 
-    async def generate_multiple_demos(self, num_episodes: int = 100, max_steps: int = 200) -> List[Dict]:
+    def generate_multiple_demos(self, num_episodes: int = 100, max_steps: int = 200) -> List[Dict]:
         """
         Generate multiple demonstration episodes
 
@@ -190,7 +181,7 @@ class ExpertMinecraftBot:
 
         for i in range(num_episodes):
             try:
-                episode = await self.generate_demonstration(max_steps)
+                episode = self.generate_demonstration(max_steps)
                 all_demos.append(episode)
 
                 # Progress update
@@ -207,7 +198,7 @@ class ExpertMinecraftBot:
         return all_demos
 
 
-async def generate_auto_demos_main():
+def generate_auto_demos_main():
     """Main function to generate automatic demonstrations"""
     import sys
 
@@ -237,12 +228,12 @@ async def generate_auto_demos_main():
     logger.info(f"Episodes to generate: {num_episodes}")
     logger.info(f"Output: {output_path}")
 
-    # Create environment
-    env = await create_minecraft_env(config=config)
+    # Create environment (synchronous)
+    env = create_minecraft_env(config=config)
 
     # Generate demonstrations
     expert_bot = ExpertMinecraftBot(config, env)
-    demos = await expert_bot.generate_multiple_demos(
+    demos = expert_bot.generate_multiple_demos(
         num_episodes=num_episodes,
         max_steps=200
     )
@@ -268,4 +259,4 @@ async def generate_auto_demos_main():
 
 
 if __name__ == "__main__":
-    asyncio.run(generate_auto_demos_main())
+    generate_auto_demos_main()

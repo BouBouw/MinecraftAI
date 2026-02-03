@@ -25,11 +25,21 @@ try:
     from llm_agent.raisonner.llm_decision import LLMDecisionMaker
     from llm_agent.executeur.action_executor import ActionExecutor
 except ImportError:
-    # Fallback pour exécution directe
+    # Fallback pour exécution directe depuis llm-agent/
     import sys
-    sys.path.insert(0, str(Path(__file__).parent.parent))
-    from llm_agent.raisonner.llm_decision import LLMDecisionMaker
-    from llm_agent.executeur.action_executor import ActionExecutor
+    from pathlib import Path
+    # Ajouter le répertoire parent au Python path
+    parent_dir = Path(__file__).parent.parent
+    if str(parent_dir) not in sys.path:
+        sys.path.insert(0, str(parent_dir))
+    # Essayer l'import avec le module
+    try:
+        from llm_agent.raisonner.llm_decision import LLMDecisionMaker
+        from llm_agent.executeur.action_executor import ActionExecutor
+    except ImportError:
+        # Dernier fallback: imports directs
+        from raisonner.llm_decision import LLMDecisionMaker
+        from executeur.action_executor import ActionExecutor
 
 logger = get_logger(__name__)
 

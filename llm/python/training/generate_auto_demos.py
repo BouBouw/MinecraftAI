@@ -69,9 +69,9 @@ class ExpertMinecraftBot:
         logger.info(f"📹 Generating demo episode {self.episode_count + 1} ({len(action_sequence)} steps)")
 
         for i, action in enumerate(action_sequence):
-            # Execute action
+            # Execute action with current state
             try:
-                next_obs, reward, done, info = await self.bridge.execute_action(action)
+                next_obs, reward, done, info = await self.bridge.execute_action(action, obs)
 
                 # Record transition
                 episode.append({

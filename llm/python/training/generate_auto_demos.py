@@ -144,38 +144,35 @@ class ExpertMinecraftBot:
         ])
 
         if sequence_type == 'mining':
-            # Mining sequence
+            # Mining sequence (using JS server action IDs)
             actions.extend([1, 1, 1])  # Move forward 3x
-            actions.extend([27])  # Look around
-            actions.extend([5])    # Jump
-            actions.extend([22])  # Look down
-            actions.extend([8, 8, 8, 8, 8])  # Mine 5x
+            actions.extend([8, 9])  # Look left, right
+            actions.extend([5])  # Jump
+            actions.extend([11])  # Look down
+            actions.extend([12, 12, 12, 12, 12])  # Mine 5x (ATTACK action)
 
         elif sequence_type == 'movement':
-            # Movement sequence
+            # Movement sequence (using JS server action IDs)
             actions.extend([1, 1, 1, 1])  # Walk forward
-            actions.extend([24])  # Look left
-            actions.extend([1, 1])  # Walk left
-            actions.extend([25])  # Look right
+            actions.extend([8])  # Look left
+            actions.extend([3])  # Strafe left
+            actions.extend([9])  # Look right
             actions.extend([5])  # Jump
-            actions.extend([1, 1, 1])  # Walk back
+            actions.extend([1, 1, 1])  # Walk forward
 
         elif sequence_type == 'crafting':
-            # Crafting sequence
-            actions.extend([43])  # Open inventory
-            actions.extend([9])   # Select slot 1 (logs)
-            actions.extend([44])  # Close inventory
-            actions.extend([20])  # Craft planks
+            # Crafting sequence (using JS server action IDs)
+            actions.extend([27])  # Craft item
 
         elif sequence_type == 'survival':
-            # Survival sequence
-            actions.extend([50])  # Eat
+            # Survival sequence (using JS server action IDs)
+            actions.extend([31])  # Eat food
 
         # Fill remaining steps with random exploration
         remaining = max_steps - len(actions)
         for _ in range(remaining):
-            # Random action from basic set
-            actions.append(np.random.choice([1, 5, 22, 23, 24, 25]))
+            # Random action from basic set (JS server IDs)
+            actions.append(np.random.choice([1, 3, 4, 5, 8, 9, 10, 11]))
 
         return actions[:max_steps]
 

@@ -242,8 +242,8 @@ Décide de la meilleure action à entreprendre:"""
         Returns:
             Décision de GLM 4.7
         """
-        # API Zhipu AI (GLM 4.7)
-        url = "https://open.bigmodel.cn/api/paas/v4/chat/completions"
+        # API Z.ai (GLM 4.7) - Endpoint officiel
+        url = "https://api.z.ai/api/paas/v4/chat/completions"
 
         headers = {
             "Authorization": f"Bearer {self.api_key}",
@@ -251,7 +251,7 @@ Décide de la meilleure action à entreprendre:"""
         }
 
         payload = {
-            "model": "glm-4",  # GLM-4 standard (supporté par Zhipu AI)
+            "model": "glm-4.7",  # GLM-4.7 (modèle officiel Z.ai)
             "messages": [
                 {
                     "role": "user",

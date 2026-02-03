@@ -62,14 +62,8 @@ class ExpertMinecraftBot:
         # Reset environment
         obs, info = self.env.reset()
 
-        # Handle if obs returns tuple
-        if isinstance(obs, tuple):
-            obs = obs[0]
-
-        # Ensure obs is a dict
-        if not isinstance(obs, dict):
-            logger.warning(f"⚠️  Observation is not a dict: {type(obs)}")
-            obs = {'position': [0, 64, 0], 'health': 20, 'food': 20}
+        # Normalize observation to dict
+        obs = self._normalize_obs(obs)
 
         # Get current position
         pos = obs.get('position', [0, 64, 0])
@@ -80,7 +74,6 @@ class ExpertMinecraftBot:
         logger.info(f"📹 Generating demo episode {self.episode_count + 1} ({len(action_sequence)} steps)")
 
         for i, action in enumerate(action_sequence):
-            # Execute action using environment's step method
             try:
                 # Convert action to dict format if needed
                 action_dict = {'action': action} if isinstance(action, int) else action
@@ -89,9 +82,8 @@ class ExpertMinecraftBot:
                 next_obs, reward, terminated, truncated, info = self.env.step(action_dict)
                 done = terminated or truncated
 
-                # Ensure next_obs is a dict
-                if not isinstance(next_obs, dict):
-                    next_obs = {'position': [0, 64, 0], 'health': 20, 'food': 20}
+                # Normalize next_obs to dict
+                next_obs = self._normalize_obs(next_obs)
 
                 # Record transition
                 episode.append({
@@ -122,6 +114,35 @@ class ExpertMinecraftBot:
         logger.info(f"✅ Episode {self.episode_count} generated ({len(episode)} steps)")
 
         return episode
+
+    def _normalize_obs(self, obs) -> Dict[str, Any]:
+        """
+        Normalize observation to ensure it's a dict
+
+        Args:
+            obs: Observation (can be dict, tuple, numpy array, etc.)
+
+        Returns:
+            Normalized observation dict
+        """
+        # Handle tuple
+        if isinstance(obs, tuple):
+            obs = obs[0] if len(obs) > 0 else obs
+
+        # If already a dict, return as-is
+        if isinstance(obs, dict):
+            return obs
+
+        # Handle numpy arrays or other types
+        if not isinstance(obs, dict):
+            return {
+                'position': [0, 64, 0],
+                'health': 20,
+                'food': 20,
+                'raw_obs': obs if not isinstance(obs, dict) else None
+            }
+
+        return obs
 
     def _generate_action_sequence(self, start_pos: List[float], max_steps: int) -> List[int]:
         """

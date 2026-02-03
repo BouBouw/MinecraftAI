@@ -115,7 +115,8 @@ class ExpertMinecraftBot:
                 logger.warning(f"⚠️  Action {action} failed: {e}")
                 import traceback
                 logger.debug(traceback.format_exc())
-                break
+                # Continue with next action instead of breaking
+                continue
 
         self.episode_count += 1
         logger.info(f"✅ Episode {self.episode_count} generated ({len(episode)} steps)")

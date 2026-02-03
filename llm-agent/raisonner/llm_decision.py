@@ -8,11 +8,18 @@ en utilisant un LLM (Claude, GPT-4, ou modèle local).
 import json
 import os
 from typing import Dict, Any, Optional
-from anthropic import Anthropic
 
 from utils.logger import get_logger
 
 logger = get_logger(__name__)
+
+# Import optionnel d'Anthropic
+try:
+    from anthropic import Anthropic
+    ANTHROPIC_AVAILABLE = True
+except ImportError:
+    ANTHROPIC_AVAILABLE = False
+    logger.info("ℹ️  Module anthropic non installé - Mode démo activé")
 
 
 class LLMDecisionMaker:
@@ -72,7 +79,11 @@ RÈGLES:
             api_key: Anthropic API key (si None, utilise la variable d'environnement)
         """
         self.api_key = api_key or os.getenv('ANTHROPIC_API_KEY')
-        if not self.api_key:
+
+        if not ANTHROPIC_AVAILABLE:
+            logger.warning("⚠️  Module anthropic non installé - Mode démo uniquement")
+            self.client = None
+        elif not self.api_key:
             logger.warning("⚠️  Pas de clé API Anthropic - Mode démo uniquement")
             self.client = None
         else:

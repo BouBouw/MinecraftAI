@@ -13,12 +13,13 @@ Usage:
 """
 
 import asyncio
+import pickle
 import numpy as np
 from pathlib import Path
 from datetime import datetime
 from typing import Dict, Any, List
 
-from bridge.minecraft_bot_bridge import MinecraftBotBridge
+from gym_env.minecraft_env import create_minecraft_env
 from utils.config import get_config
 from utils.logger import get_logger
 
@@ -32,16 +33,16 @@ class ExpertMinecraftBot:
     This bot demonstrates basic Minecraft skills automatically.
     """
 
-    def __init__(self, config: Dict[str, Any], bridge: MinecraftBotBridge):
+    def __init__(self, config: Dict[str, Any], env):
         """
         Initialize expert bot
 
         Args:
             config: Configuration dictionary
-            bridge: Minecraft bot bridge
+            env: Minecraft environment
         """
         self.config = config
-        self.bridge = bridge
+        self.env = env
         self.episode_count = 0
 
     async def generate_demonstration(self, max_steps: int = 200) -> List[Dict]:
@@ -57,21 +58,34 @@ class ExpertMinecraftBot:
         episode = []
 
         # Reset environment
-        obs = await self.bridge.reset_environment()
+        obs, info = await self.env.reset()
+        if isinstance(obs, tuple):
+            obs = obs[0]  # Handle if obs returns tuple
 
         # Get current position
         pos = obs.get('position', [0, 64, 0])
 
         # Sequence of actions to demonstrate
-        # Start with simple movement
         action_sequence = self._generate_action_sequence(pos, max_steps)
 
         logger.info(f"📹 Generating demo episode {self.episode_count + 1} ({len(action_sequence)} steps)")
 
         for i, action in enumerate(action_sequence):
-            # Execute action with current state
+            # Execute action using environment's step method
             try:
-                next_obs, reward, done, info = await self.bridge.execute_action(action, obs)
+                # Convert action to dict format if needed
+                action_dict = {'action': action} if isinstance(action, int) else action
+
+                # Step the environment - returns (obs, reward, terminated, truncated, info)
+                result = await self.env.step(action_dict)
+
+                # Unpack the 5-tuple
+                if len(result) == 5:
+                    next_obs, reward, terminated, truncated, info = result
+                    done = terminated or truncated
+                else:
+                    # Fallback for older interface
+                    next_obs, reward, done, info = result
 
                 # Record transition
                 episode.append({
@@ -93,6 +107,8 @@ class ExpertMinecraftBot:
 
             except Exception as e:
                 logger.warning(f"⚠️  Action {action} failed: {e}")
+                import traceback
+                logger.debug(traceback.format_exc())
                 break
 
         self.episode_count += 1
@@ -112,9 +128,6 @@ class ExpertMinecraftBot:
             List of action IDs
         """
         actions = []
-
-        # Get current observation
-        # TODO: In a real implementation, we'd read the actual game state
 
         # Simple demonstration sequences
         sequence_type = np.random.choice([
@@ -145,7 +158,7 @@ class ExpertMinecraftBot:
             # Crafting sequence
             actions.extend([43])  # Open inventory
             actions.extend([9])   # Select slot 1 (logs)
-            actions.extend([43])  # Close inventory
+            actions.extend([44])  # Close inventory (was 43 before)
             actions.extend([20])  # Craft planks
 
         elif sequence_type == 'survival':
@@ -186,6 +199,8 @@ class ExpertMinecraftBot:
 
             except Exception as e:
                 logger.error(f"❌ Error generating episode {i}: {e}")
+                import traceback
+                logger.debug(traceback.format_exc())
                 continue
 
         logger.info(f"✅ Generated {len(all_demos)} demonstration episodes")
@@ -218,21 +233,15 @@ async def generate_auto_demos_main():
     # Load config
     config = get_config(config_path)
 
-    # Create bridge
-    bridge_config = config.get('bridge', {})
-    bridge_host = bridge_config.get('host', 'localhost')
-    bridge_port = bridge_config.get('port', 8765)
-
     logger.info(f"🤖 Creating Expert Bot (auto-demos)")
     logger.info(f"Episodes to generate: {num_episodes}")
     logger.info(f"Output: {output_path}")
 
-    # Connect
-    bridge = MinecraftBotBridge(host=bridge_host, port=bridge_port)
-    await bridge.connect()
+    # Create environment
+    env = await create_minecraft_env(config=config)
 
     # Generate demonstrations
-    expert_bot = ExpertMinecraftBot(config, bridge)
+    expert_bot = ExpertMinecraftBot(config, env)
     demos = await expert_bot.generate_multiple_demos(
         num_episodes=num_episodes,
         max_steps=200
@@ -250,7 +259,6 @@ async def generate_auto_demos_main():
     output_path = Path(output_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
-    import pickle
     with open(output_path, 'wb') as f:
         pickle.dump(demo_data, f)
 
